@@ -51,6 +51,9 @@ conclusion to this: `(N': AP N'), AP, (A': A)` all `+`, two/three of `A': (AdvP 
         * woman (in love), woman (in love with her neighbor)
     * alternatively: we can just add in an adverb on an adjective, then leave nouns and prepositions to fuck around with later. this gives us `(A': AdvP A')`, `AdvP`, and `Adv'` to play with. we have to make two of these `-`, one neutral. I vote `A': AdvP A'` and `Adv'`
 
+conclusion:
+    * set `AdvP` to `-`, `Adv': AdvP Adv'` to `]`, and `AdvP Conj` to `++`
+    * having conjugation "cancel out" the things it connects is a really good idea
 * but now though, going back to `-`, it seems like `-]` is even more common than `--`
 * but anyways... currently an adverb phrase in isolation is just one `-`
 * with adverbs, I have two `V` rules. under NLR I cannot make smtg like "quickly run" lead into `-]`, (`]` being with `V': AdvP V'`), but I could with LNR. using LNR also won't jeopordize the above rules, but it could make other parts of way harder...
@@ -78,9 +81,10 @@ N - noun
 * N': N
 
 Adv - adverb
-* AdvP: Adv' - `null`
-* Adv': AdvP Adv'
-* Adv': Adv - `-`
+* AdvP: Adv' - `-`
+* Adv': AdvP Adv' - `]`
+* Adv': Adv - `null`
+* AdvP: AdvP Conj AdvP - `++`
 
 A - adjective
 * AP: A' - `+`

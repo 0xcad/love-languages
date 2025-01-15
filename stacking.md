@@ -54,6 +54,7 @@ conclusion to this: `(N': AP N'), AP, (A': A)` all `+`, two/three of `A': (AdvP 
 conclusion:
     * set `AdvP` to `-`, `Adv': AdvP Adv'` to `]`, and `AdvP Conj` to `++`
     * having conjugation "cancel out" the things it connects is a really good idea
+    * phrase "(really and truly) quietly" encodes `-]`
 * but now though, going back to `-`, it seems like `-]` is even more common than `--`
 * but anyways... currently an adverb phrase in isolation is just one `-`
 * with adverbs, I have two `V` rules. under NLR I cannot make smtg like "quickly run" lead into `-]`, (`]` being with `V': AdvP V'`), but I could with LNR. using LNR also won't jeopordize the above rules, but it could make other parts of way harder...
@@ -62,6 +63,8 @@ conclusion:
 * oh, potentially easy, just do `AdvP: AdvP Conj AdvP` to pull this off? that rule can be `-]-` (LNR), and then we add smtg after it?
 * better, we could just do adverb phrase stacking to get `-]-`?
     * ok, so I think this means we use NLR still, have `Adv': AdvP Adv'` map to `]`, and `AdvP` map to `-`. we use right-weighted adverb trees (those are most nautral anyways), and smtg like three adverbs stacked together like this yields `-]-]-`
+* problem: now I can't get to just `]`. I can do `+]` with "((unusually and serenely) quietly) and (quickly and speedily)". I can do `+]-` with "(((unusually and serenly) quietly) and quickly".
+* solution: set `Adv': Adv' Conj Adv'` to be just `+`. Then "((quickly and quietly) fluidly) and serenly" is just `]`, which is really awful, but that does work
 
 * for `.` I could use just use a `,` in place of conjungtion (?)
     * oh, wait, here's an idea --- what if conjungtion, which is always possible, is designed just to make phrases "neutral" between them. this allows me to quickly reset, I really like this idea.
@@ -85,6 +88,7 @@ Adv - adverb
 * Adv': AdvP Adv' - `]`
 * Adv': Adv - `null`
 * AdvP: AdvP Conj AdvP - `++`
+* Adv': Adv' Conj Adv' - `+`
 
 A - adjective
 * AP: A' - `+`

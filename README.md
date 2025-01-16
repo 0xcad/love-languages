@@ -122,7 +122,9 @@ I learned so much about X-bar rules to decide that while I could use it, I'm not
 D - determiner
 * DP: D'
 * D': D NP - the dog, his (dog in the car), my dog
-* D': NP - Cassidy, I, you, books
+* D': NP - books, men
+* DP: Pronoun (nomative/accusative): Cassidy, I, you, she, it, we
+    * weird rule(?): "DP and I" works, but "I and DP" feels weird
 
 N - noun
 * NP: N' - black dog in the car, really blue woman, young green fellow with the purple socks
@@ -181,6 +183,18 @@ distribution of operations in `corpus.txt`:
 > 35.30127960275019
 ```
 * surprisingly, `+` is used less often than I expected, and `<` and `>` are used the most, in about equal proportion. `-` is used rarely, almost just as often as `[` and `]` (used in equal proportion of course), and `,` is as expected used pretty much negligbly.
+
+hold up, I took out the pi function bc that's an outlier, most programs I'd be interested in don't look like that. this is what I have now:
+```
++ 30.78616352201258
+> 20.157232704402517
+< 17.92452830188679
+- 11.446540880503145
+[ 7.610062893081761
+] 7.610062893081761
+, 0.15723270440251574
+. 4.3081761006289305
+```
 
 distribution of "run lengths", the number of times a symbol appears in a row:
 ```

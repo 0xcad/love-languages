@@ -66,8 +66,25 @@ conclusion:
 * problem: now I can't get to just `]`. I can do `+]` with "((unusually and serenely) quietly) and (quickly and speedily)". I can do `+]-` with "(((unusually and serenly) quietly) and quickly".
 * solution: set `Adv': Adv' Conj Adv'` to be just `+`. Then "((quickly and quietly) fluidly) and serenly" is just `]`, which is really awful, but that does work
 
-* for `.` I could use just use a `,` in place of conjungtion (?)
-    * oh, wait, here's an idea --- what if conjungtion, which is always possible, is designed just to make phrases "neutral" between them. this allows me to quickly reset, I really like this idea.
+conclusion: changed some rules and switched to LNR
+    * also: turns out `[-[-[-`... is actually fairly common, so having that stack would be great
+* I've decided to switch to LNR, I think. I think this will make `[` simpler, but also, maybe be more "honest" with things like "and" across a long sentence?.
+    * "really quickly" encodes `--]` (and note that `[--]` is equivalent to `[-]` in bf... uh, if we don't underflow, uh oh)
+    * "truly and (really quickly)" encodes `-++--]` or `-]`
+* ok, scratch all of the before, what if I set `AdvP: Adv'` to be `null`, `Adv': Adv` to be `-`
+    * `Adv': Adv' Conj Adv'` encodes `++`
+    * AdvP: "really quickly" encodes `-[-`
+    * AdvP: "truly really... quickly" encodes `-[-[ ... -[-`
+    * AdvP: "really (quickly and serenly)" encodes `-[`
+    * AdvP: "(quickly and quietly) (serenly and solemnly)" encodes `[`
+    * `AdvP: AdvP Conj AdvP` is null, which lets us stack `[[`
+
+conclusion:
+    * in progress
+* per, now we kind of have `+-[` somewhat handled, I think the distribution so far is fair game, too; `+` is most common in my corpus, stacks the most, then `-` shows up like 11% of the time, `]` 7%... I might have to tackle more of these cases later as well. but now let's think about `>` and `<`? have determiners, nouns, verbs, prepositions, and need `><]`. Could also do smtg with S ("I tell her" vs "tell her", no DP required). Also, note that you can always move an adverb to the start of a sentence, i.e "quickly, I run there", which is just movement on "I run there quickly" and "I quickly run there". I know that this is movement, but I can probably bend the rules and just have `S: Adv , S` be a rule as well
+* I have the rule `DP: Pronoun` now which is cool, but also somewhat limited bc it can't be modified by adjectives
+* just to start: let `DP: Pronoun` be `>`, `DP: DP Conj DP` `<<`.
+
 
 * consider stacking `>` with prepositional phrases. a typical PP ("in the house") is three words. If something like the D/N are neutral, then to pull its weight a preposition could be like, four symbols. then I need something for `<` that's worth three symbols, right, and that's how I get my one.
 
@@ -84,11 +101,11 @@ N - noun
 * N': N
 
 Adv - adverb
-* AdvP: Adv' - `-`
-* Adv': AdvP Adv' - `]`
-* Adv': Adv - `null`
-* AdvP: AdvP Conj AdvP - `++`
-* Adv': Adv' Conj Adv' - `+`
+* AdvP: Adv' - `null`
+* Adv': AdvP Adv' - `[`
+* Adv': Adv - `-`
+* AdvP: AdvP Conj AdvP - `null`
+* Adv': Adv' Conj Adv' - `++`
 
 A - adjective
 * AP: A' - `+`

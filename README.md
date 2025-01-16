@@ -128,13 +128,13 @@ D - determiner
 
 N - noun
 * NP: N' - black dog in the car, really blue woman, young green fellow with the purple socks
-* N': (AP) N' - (black) (dog in the car)
-* N': N' (PP) - (black dog in the car) (on the road)
-* N' N (PP) - dog (in the car)
+* N': (AP) N' - (black) (book of poems)
+* N': N' (PP) - (black book of poems) (in the car)
+* N' N (PP) - complement rule - book (of poems)
 
 V - verb
 * VP: V'
-* V': V' (PP)  - eat (with a knife), (eat the man) (with a fork), clings (to), longs (for)
+* V': V' (PP)  - eat (like a dog), (eat the man) (with a fork), cling (to), long (for)
 * V': V' (AdvP) - leaves (quickly), (leaves early) (quickly)
 * V': (AdvP) V' - (frequently) (leaves early)
 * V': V (DP) - run, run (this house)

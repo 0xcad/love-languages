@@ -83,14 +83,29 @@ conclusion:
     * in progress
 * per, now we kind of have `+-[` somewhat handled, I think the distribution so far is fair game, too; `+` is most common in my corpus, stacks the most, then `-` shows up like 11% of the time, `]` 7%... I might have to tackle more of these cases later as well. but now let's think about `>` and `<`? have determiners, nouns, verbs, prepositions, and need `><]`. Could also do smtg with S ("I tell her" vs "tell her", no DP required). Also, note that you can always move an adverb to the start of a sentence, i.e "quickly, I run there", which is just movement on "I run there quickly" and "I quickly run there". I know that this is movement, but I can probably bend the rules and just have `S: Adv , S` be a rule as well
 * I have the rule `DP: Pronoun` now which is cool, but also somewhat limited bc it can't be modified by adjectives
-* just to start: let `DP: Pronoun` be `>`, `DP: DP Conj DP` `<<`.
+* goal: find some reasonably robust way to stack `<` and `>`, and a way to transition to `+` and `-` from them. worry about `]` later.
+    * the "conjunction should be neutral" idea could really help here, but implies that
+* nouns: adjectives can come before them, preopositions after them
+* verbs: prepositions can go after them, adverbs wherever. can have a DP complement, or two
+* determiners: the D can actually be optional, have pronouns, or just D NP
+    * D' D NP is going to show up forever, maybe toggling D helps for remainder?
+    * doesn't really stuck, except with prepositions
+* prepositions: can have a DP complement, or PP adjunct (which pretty much just means stack `[P'] P' PP`)
+    * if, say, nouns are `>` then prepositions can be `<` to get a good way to cancel them out
+* comment dit on, "(the man that|who I love) cooks the pasta" -- looks like a complementizer on a DP? - this is a distraction, lol, but maybe come back to this later...
+* using more than one `conj` rule per part of speech feels like cheating since they're indistinguishable from each other...
+* TODO: switch back to NLR, lol, or flesh out an NLR system with the above goal and then write it out
+
+I came back after a break and I'm so glad I did, because I think I got it. One, don't switch to NLR, that's stupid, don't do that. Two: the name of the game is movement. Ok, so I'm actually in a much better place now than I realized initially. Adjectives and adverbs are *always optional*, we never *have* to put them in a sentence, and when we do, one never relies on the other. But adjectives and adverbs always need verbs and nouns, those aren't optional. Verbs, nouns, and yes, prepositions too, will all control *movement*, i.e `<` and `>`. No surprise, but I didn't realize earlier why this is so great (although I guess I could also swap the role of `+-/<>` and everything would still work). Because we'rerequired to use that pieces, but they can be canceled *so easily* if I can construct sentences that 1) move forward relatively fluidly, and 2) move backwards relatively fluidly. That's it. So we know calling an adjective is going to take a noun, which will move us forwards? No problem, move backwards pre-emptively, then move forwards, apply the adjective, and move out of the sentence (either forward or backwards towards a neutral position). Then have some other number of movement sentences get you back on track. Yes this is bad for wc, but this is probably the only way this'll work.
+* initial ideas: nouns/verbs all move you forwards, prepositions shoot you far back to overcompensate, maybe 'and' does too. pronouns can be some variable on this, then I have transitive and ditransitive verbs, too.
+    * the goal is to give yourself a lot of options in terms of numbers to work with
+    * and a sentence, and a preposition, and a DP, and a verb, all optional and all on the table
+* optional things for `]`, or maybe `.`: start sentence with adverb, complementer ("as if" is always syntactical)
+    * `]` does seem to stack a fair bit
 
 
 * consider stacking `>` with prepositional phrases. a typical PP ("in the house") is three words. If something like the D/N are neutral, then to pull its weight a preposition could be like, four symbols. then I need something for `<` that's worth three symbols, right, and that's how I get my one.
 
-
-## misc
-remember, smtg I forgot earlier: determiner phrases don't have to have a D in them (in the case of a plural subject, or pronoun/name); and conjunction still exists
 
 ### rules
 N - noun
@@ -112,3 +127,8 @@ A - adjective
 * A': AdvP A' - `-`
 * A': A PP
 * A': A - `+`
+* A': A' Conj A' - `--`
+* AP: AP Conj AP - idea: smtg super negative, lets us use `-` anywhere we can use `+`? if adjectives are already optional then conjunction to cancel smtg out isn't necessarily needed. oh, but neutrality could be helpful if we want to say, use `[` anywhere we can use `+`. bc we can already stack adverbs on adjectives to get `-`
+    * idea, algorithm for placing letters: anytime we *can* step into a tree that contains a rule that we do want, we should be able to do so, place the rule, and just use conjunction to cancel everything else out...
+    * doesn't actually work though, since only adjacent "pairs" can cancel, otherwise you could get smtg like `-->++`
+    * holy shit I think I should switch back to NLR, fuck, that's the only way to get conjugation to "cancel" in place...

@@ -102,18 +102,39 @@ I came back after a break and I'm so glad I did, because I think I got it. One, 
     * and a sentence, and a preposition, and a DP, and a verb, all optional and all on the table
 * optional things for `]`, or maybe `.`: start sentence with adverb, complementer ("as if" is always syntactical)
     * `]` does seem to stack a fair bit
+* I'm getting a bit of choice paralysis with assigning these rules out, so I guess, what's a good property? I know that I'll probably grow in symbol count, so it would be nice if I have areas to make that up by having *short sentences* correspond to more symbols than they have. I think to *maximize* benefits, I should have "I verb" and "nouns verb" be <4 and >4 respectively. Ugh, but will this sound ok?
+* ok I think i got it pretty good, I can probably start programming now. and also -- `]` can now stack with NP conj, most NP's (but not all) are now
+* next: try to write a *basic* program that traverses a bf program using `><][+-`, maybe for now ignore `,` and `.`, or like, use a special rule just for them. *later*, I can totally bring in, say, at least `.` into the language using complementizers, adverbs at the start of a sentence, etc.
 
 
 * consider stacking `>` with prepositional phrases. a typical PP ("in the house") is three words. If something like the D/N are neutral, then to pull its weight a preposition could be like, four symbols. then I need something for `<` that's worth three symbols, right, and that's how I get my one.
 
 
 ### rules
-N - noun
-* NP: N'
+D - determiner
+* DP: D' - `null`
+* D': D NP - `null`
+* D': NP - `>>>`
+* DP: Pronoun - `<<<<`
+* DP: DP Conj DP - `>>`
+
+N
+* NP: N' - `>`
 * N': AP N' - `+`
-* N': N' PP
-* N': N PP
-* N': N
+* N': N' PP - `null`
+* N': N PP - `null`
+* N': N - `<`
+* NP: NP Conj NP - `]`
+
+V - verb
+* VP: V' -`>`
+* V': V' PP - `null`
+* V': V' AdvP - `null`
+* V': AdvP V' -`null`
+* V': V DP - `>`
+* V': V - `null`-
+* V': DTV DP DP - `>`
+* V': V CP  - `null` - maybe make this smtg like `,`?
 
 Adv - adverb
 * AdvP: Adv' - `null`
@@ -125,10 +146,14 @@ Adv - adverb
 A - adjective
 * AP: A' - `+`
 * A': AdvP A' - `-`
-* A': A PP
+* A': A PP - `null`
 * A': A - `+`
 * A': A' Conj A' - `--`
-* AP: AP Conj AP - idea: smtg super negative, lets us use `-` anywhere we can use `+`? if adjectives are already optional then conjunction to cancel smtg out isn't necessarily needed. oh, but neutrality could be helpful if we want to say, use `[` anywhere we can use `+`. bc we can already stack adverbs on adjectives to get `-`
-    * idea, algorithm for placing letters: anytime we *can* step into a tree that contains a rule that we do want, we should be able to do so, place the rule, and just use conjunction to cancel everything else out...
-    * doesn't actually work though, since only adjacent "pairs" can cancel, otherwise you could get smtg like `-->++`
-    * holy shit I think I should switch back to NLR, fuck, that's the only way to get conjugation to "cancel" in place...
+* AP: AP Conj AP - idea: smtg super negative?
+
+P - preposition
+* PP: P' - `>>`
+* PP: PP Conj PP - `>>>>`
+* P': P' PP - `null`
+* P': P DP - `null`
+* P': P - `null`

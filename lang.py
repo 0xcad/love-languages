@@ -328,6 +328,7 @@ class GraphNode:
 
         self.force_recurse_right = force_recurse_right
         self.is_terminal = False
+        self.is_exit = self.node.l_leaf and self.node.r_leaf
 
     def add_neighbor(self, neighbors, g):
         g.ops_path = self.ops_path.copy()
@@ -360,19 +361,19 @@ class GraphNode:
 
         neighbors = []
 
-        neighbor_rule = None
+        target_rule = None
         if not(self.force_recurse_right) and not self.node.l_leaf:
-            neighbor_rule = self.node.l
+            target_rule = self.node.l
         elif not self.node.r_leaf:
-            neighbor_rule = self.node.r
+            target_rule = self.node.r
         elif self.node.third:
-            neighbor_rule = self.node.third
+            target_rule = self.node.third
 
-        if neighbor_rule is not None:
-            neighbor_rule_nodes = self.tree.nodes[neighbor_rule]
+        if target_rule is not None:
+            target_rule_nodes = self.tree.nodes[target_rule]
             # ^ all tree nodes that correspond to this rule
 
-            for n in neighbor_rule_nodes:
+            for n in target_rule_nodes:
                 # add all rules of form (NeighborRule: (Leaf) NR_R)
                 if n.l_leaf:
                     commitments = copy.deepcopy(self.commitments)
@@ -387,22 +388,24 @@ class GraphNode:
                     self.add_neighbor(neighbors, g)
 
         # exit node
-        if self.node.l_leaf and self.node.r_leaf:
+        if self.is_exit:
             scope = self.commitments[-1]
             for i, n in enumerate(scope):
-                if i == 0:
+
+                g = None
+                # allow us to terminate the graph if we want to / restart
+                if n is None:
+                    self.is_terminal = True # TODO?
+                    g = GraphNode(self.tree, [[ROOT_NODE]], ROOT_NODE, is_choice=True)
+                    self.add_neighbor(neighbors, g)
+                    continue
+                # exit a current scope to some other one
+                elif i == 0:
                     commitments = copy.deepcopy(self.commitments)
                     commitments.pop()
                     if len(commitments) == 0:
-                        commitments = [[]]
-
-                    g = None
-                    # allow us to terminate the graph if we want to / restart
-                    if commitments == [[]] and n.rule == ROOT_NODE.r:
-                        g = GraphNode(self.tree, [[ROOT_NODE]], ROOT_NODE, is_choice=True)
-                        self.is_terminal = True # TODO?
-                    else:
-                        g = GraphNode(self.tree, commitments, n, force_recurse_right=True)
+                        commitments = [[None]]
+                    g = GraphNode(self.tree, commitments, n, force_recurse_right=True)
                     self.add_neighbor(neighbors, g)
 
                 # get all left recursive rules in scope
@@ -455,6 +458,8 @@ class GraphFinder(AStar):
 
         increase the cost if we see undo/inverse operations that aren't all unique
         the cost has to be infinity if we see [ or ] wherever it doesn't belong
+
+        TODO: I think a problem with this is that I have a lot of ops where I have to add wrong ones to it first in order for it to be correct...
         '''
         curr = current.ops_path
         i = 0
@@ -470,16 +475,15 @@ class GraphFinder(AStar):
         for o in undo_ops:
             if o == '[' or o == ']':
                 return inf
-            #if o != prev_o:
-            #    h += 0.2 # TODO: tweak these values, idk
+            if o != prev_o:
+                h += 0.2 # TODO: tweak these values, idk
 
         h += len(goal[i:])
         print(curr, ' ' * 20, '\r', end='')
         return h
 
     def distance_between(self, n1, n2):
-       return 0.1 + n1.node.word_cost
-        # tweak word cost, idk.
+       return n2.node.word_cost
 
     def neighbors(self, node):
         return node.get_neighbors()
@@ -512,12 +516,11 @@ def find_bf(bf):
     return paths
 
 
-#paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
+'''paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
 #paths = find_bf('.+[.+]')
-paths = find_bf('.+[-.++')
 for p in paths:
     for n in p:
-        print(repr(n), end=' ')
+        print(repr(n), end=' ')'''
 
 def main():
     curr = root
@@ -531,12 +534,12 @@ def main():
             ]
         print('\n'.join(s))
         print("Current path:", " ".join([f'({n.node.rule_str})' for n in path]))
-        print(curr.ops_path, curr.is_terminal)
+        print(curr.ops_path, curr.is_exit)
         i = int(input("Choice: ").strip())
         curr = curr.neighbors[i-1]
         print('')
 
 
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()
 

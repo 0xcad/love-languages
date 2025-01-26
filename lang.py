@@ -134,7 +134,7 @@ rules = [
     {'rule': "NP: NP Conj NP", 'ops': "]"},
     {'rule': "N': AP N'", 'ops': "+"},
     {'rule': "N': N' PP", 'ops': ""},
-    {'rule': "N': N PP", 'ops': ""},
+    #{'rule': "N': N PP", 'ops': ""},
     {'rule': "N': N", 'ops': "<"},
 
     # VP rules
@@ -176,10 +176,15 @@ everytime we see XP or X' we interpret that as a choice node
 so I think a graph is a dictionary; keys are either XP or X' and represent the "choice nodes", and values are a list/set of the actual nodes attached to them.
 '''
 import random
+import copy
 
-is_head = lambda X: X and not (X.endswith("'") or (len(X) > 1 and X.endswith("P")))
-class Node:
-    def __init__(self, rule_dict):
+is_head = lambda X: X is None or not (X.endswith("'") or (len(X) > 1 and X.endswith("P")))
+class TreeNode:
+    def __init__(self, rule_dict : dict):
+        '''
+        Given a dictionary in the form
+        {'rule': `rule`, 'ops': `ops`} construct a node for the rule
+        '''
         self.rule_str = rule_dict['rule']
         self.ops = rule_dict['ops']
         self.l = None
@@ -200,12 +205,14 @@ class Node:
                 self.third = children[2] if len(children) > 2 else None
 
 
-        self.l_head = is_head(self.l)
-        self.r_head = is_head(self.r)
+        self.l_leaf = is_head(self.l)
+        self.r_leaf = is_head(self.r)
+        self.is_right_recursive = rule == self.r
+        self.is_left_recursive = rule == self.l
 
         self.rule = rule
         #self.words = bool(self.l_head) + bool(self.r_head) # TODO wrong
-        print(rule, ':', self.l, self.r, self.third, '\t', self.l_head, self.r_head)
+        #print(rule, ':', self.l, self.r, self.third, '\t', self.l_leaf, self.r_leaf)
 
         # TODO later
         self.frequency_cost_multiplier = 1
@@ -214,7 +221,7 @@ class Node:
         weight = 5
         if "Conj" in self.rule_str:
             weight -= 4
-        elif self.l_head or self.r_head:
+        elif self.l_leaf or self.r_leaf:
             weight += 5 * 2.5
         return weight
 
@@ -222,23 +229,32 @@ class Node:
         return f"{self.rule}: " + ' '.join([x for x in [self.l, self.r, self.third] if x])
 
     def __repr__(self):
-        return self.__str__()
+        return f'`{self.__str__()}`'
 
-class Graph:
-    def __init__(self, rule_array):
+class Tree:
+    '''
+    A recursive, binary tree representing all given X-bar rules
+    '''
+    def __init__(self, rule_array : list[dict]):
+        self.nodes = {}
+        self.rules = {}
         self.add_nodes(rule_array)
 
     def add_nodes(self, rule_array):
         '''
-        initializes a dictionary of nodes
-        the keys are "choice nodes", strings; the values are the nodes
+        initializes a dictionary of nodes and rules
+        self.nodes: keys are "choice nodes", values are the set of nodes that can be chosen
+        self.rules: keys are entire rules, values are the nodes
         '''
-        self.nodes = {}
         for rule_dict in rule_array:
-            node = Node(rule_dict)
+            node = TreeNode(rule_dict)
             self.nodes[node.rule] = self.nodes.get(node.rule, set()).union(set([node]))
+            self.rules[node.rule_str] = node
 
     def random_traverse(self):
+        '''
+        do an in order traversal of the tree, randomly picking nodes at each choice node
+        '''
         root = 'SP'
         visited = {}
         def helper(root, head=False, depth=0):
@@ -260,7 +276,7 @@ class Graph:
             node = random.choices(nodes, weights=weights)[0]
             if depth > 12:
                 for n in nodes:
-                    if n.l_head and not n.r:
+                    if n.l_leaf and not n.r:
                         node = n
                         break
             visited[node.rule_str] = visited.get(node.rule_str, 1) + 1
@@ -268,16 +284,175 @@ class Graph:
             '''if 'Conj' in node.rule_str:
                 if random.random() < 0.85:
                     node = random.choice(list(self.nodes[root]))'''
-            helper(node.l, node.l_head, depth + 1)
+            helper(node.l, node.l_leaf, depth + 1)
             #print(node)
             #input(' ' * depth + str(node))
             #print(' ' * depth + str(node))
-            helper(node.r, node.r_head, depth + 1)
+            helper(node.r, node.r_leaf, depth + 1)
             helper(node.third, depth=depth+1)
 
         helper(root)
 
+T = Tree(rules)
+ROOT_NODE = T.rules['SP: DP VP']
+
+class GraphNode:
+    '''
+    Produces a graph of an in-order traversal of the recursive binary tree `tree`
+
+    Every graph node has
+    1. What rule / tree node is it
+    2. Choice node (left recursive / start) or not
+    '''
+    def __init__(self,
+            tree : Tree,
+            commitments : list[list], # stack of stacks
+            node : TreeNode,
+            is_choice : bool = False,
+            force_recurse_right : bool = False,
+        ):
+        self.tree = tree
+        self.commitments = commitments
+        self.node = node
+
+        self.neighbors = None
+
+        self.is_choice = is_choice
+        # choice nodes don't produce rules when we pass through them
+
+        self.ops = self.node.ops if not is_choice else None
+
+        self.force_recurse_right = force_recurse_right
+        self.is_terminal = False
+
+    def get_neighbors(self):
+        '''
+        the outgoing neighbors of a node (N: L R), where NR is "neighbor rule" (L or R):
+        1. all rules of the form (NR: (Leaf) NR_R)
+        2. if the right-recursive rule (NR: NR_L NR) exists, then all rules of the form (NR: (Leaf) NR_R) (enter a new choice node)
+            * if in this scenario, we "enter a new scope", i.e start another committed list in our stack
+        3. if the node is an *exit-node*, i.e L and R are both leafs, then
+            * we can access all left-recursive `(X: X Y)` rules for nodes that are present in the current scope/stack/commitment/whatever.
+            * if we go to that rule, we pop `X` off of our stack, and produce all options for `Y`.
+        '''
+        if self.neighbors:
+            return self.neighbors
+
+        neighbors = []
+
+        neighbor_rule = None
+        if not(self.force_recurse_right) and not self.node.l_leaf:
+            neighbor_rule = self.node.l
+        elif not self.node.r_leaf:
+            neighbor_rule = self.node.r
+        elif self.node.third:
+            neighbor_rule = self.node.third
+
+        if neighbor_rule is not None:
+            '''
+            neighbors are all the nodes of neighbor rule that have left leaves
+            TODO: and ig, right recursive rules of left rule?
+            '''
+            neighbor_rule_nodes = self.tree.nodes[neighbor_rule]
+            # ^ all tree nodes that correspond to this rule
+
+            for n in neighbor_rule_nodes:
+                #print('an option:', n, n.l_leaf)
+                # add all rules of form (NeighborRule: (Leaf) NR_R)
+                if n.l_leaf:
+                    commitments = copy.deepcopy(self.commitments)
+                    commitments[-1] += [n]
+                    #print('  the new commitments for this graph node is', commitments)
+                    g = GraphNode(self.tree, commitments, n)
+                    neighbors.append(g)
+
+                # add all right-recursive choice node rules of form (NR: NR_L NR)
+                if n.is_right_recursive:
+                    #print('  we see a right recursive rule...')
+                    # start a new commitment, with a choice node
+                    g = GraphNode(self.tree, self.commitments + [[n]], n, is_choice = True)
+                    neighbors.append(g)
+
+        # exit node
+        if self.node.l_leaf and self.node.r_leaf:
+            #print('commitments', self.commitments)
+            scope = self.commitments[-1]
+            for i, n in enumerate(scope):
+                if i == 0:
+                    commitments = copy.deepcopy(self.commitments)
+                    commitments.pop()
+                    if len(commitments) == 0:
+                        commitments = [[]]
+
+                    # TODO: VP is just hardcoded in here, i don't like that
+                    g = None
+                    if commitments == [[]] and n.rule == ROOT_NODE.r:
+                        g = GraphNode(self.tree, commitments, ROOT_NODE, is_choice=True)
+                        self.terminate = True # TODO?
+                    else:
+                        g = GraphNode(self.tree, commitments, n, force_recurse_right=True)
+                    neighbors.append(g)
+
+                # get all left recursive rules in scope
+                n_rules = self.tree.nodes[n.rule]
+                for n_rule in n_rules:
+                    if not n_rule.is_left_recursive:
+                        continue
+                    commitments = copy.deepcopy(self.commitments)
+                    commitments[-1] = commitments[-1][:i+1]
+                    g = GraphNode(self.tree, commitments, n_rule, force_recurse_right=True)
+                    neighbors.append(g)
+
+        self.neighbors = neighbors
+        return neighbors
+
+    def __str__(self):
+        s = str(self.node) + '\n' + str(self.commitments) + '\n'
+        if self.is_choice:
+            return 'choice node: ' + s
+        return s
+
+    def __repr__(self):
+        if self.is_choice:
+            return 'choice node: ' + repr(self.node)
+        return repr(self.node)
 
 
-G = Graph(rules)
-#G.random_traverse()
+
+#print(T.nodes)
+#print(T.rules)
+# TODO: rename T.nodes to T.connected_nodes
+
+'''
+idea: the root graph node has this "is_root" attribute which gets passed to the node in the scope
+if something is root, then when we add it as a neighbor in the exit node, we set the graph node back to this "is_root" attribute
+then when we add it's  force recurse right thing, we set this "is_terminal" flag
+if a node has "is_terminal" set, ...
+
+or I just make ROOT_NODE a constant...
+hard code on VP, sure, that worked, and just add the root node as an option again
+'''
+
+root = GraphNode(T, [[ROOT_NODE]], ROOT_NODE, is_choice = True)
+
+def main():
+    curr = root
+    path = []
+    while curr.get_neighbors():
+        if not curr.is_choice:
+            path.append(curr)
+        s = [
+                f'{i + 1}. {"choice:" if n.is_choice else ""} {n.node.rule_str}\n  Commitments: {n.commitments}'
+             for i, n in enumerate(curr.neighbors)
+            ]
+        print('\n'.join(s))
+        print("Current path:", " ".join([f'({n.node.rule_str})' for n in path]))
+        print("commitments", curr.commitments)
+        i = int(input("Choice: ").strip())
+        curr = curr.neighbors[i-1]
+        print('')
+
+
+if __name__ == '__main__':
+    main()
+

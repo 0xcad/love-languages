@@ -124,10 +124,10 @@ rules = [
     #{'rule': "AnyDP: AnyDP Conj AnyDP", 'ops': ">>"},
     #{'rule': "ProDP: Pronoun", 'ops': "<<<<"},
 
-    {'rule': "DP: DP Conj DP", 'ops': ">>"},
-    {'rule': "DP: Pronoun", 'ops': "<<<<"},
+    {'rule': "DP: DP Conj DP", 'ops': ">>", "word_cost": 2},
+    {'rule': "DP: Pronoun", 'ops': "<<<<", "word_cost": 1},
     {'rule': "DP: D'", 'ops': ""},
-    {'rule': "D': D NP", 'ops': ">>"},
+    {'rule': "D': D NP", 'ops': ">>", "word_cost": 1},
     {'rule': "D': NP", 'ops': ">>>", "right": True},
 
     {'rule': "NP: N'", 'ops': ">"},
@@ -135,39 +135,39 @@ rules = [
     {'rule': "N': AP N'", 'ops': "+"},
     {'rule': "N': N' PP", 'ops': ""},
     #{'rule': "N': N PP", 'ops': ""},
-    {'rule': "N': N", 'ops': "<"},
+    {'rule': "N': N", 'ops': "<", "word_cost": 1},
 
     # VP rules
     {'rule': "VP: V'", 'ops': ">"},
-    {'rule': "VP: VP Conj VP", 'ops': "<<<<"},
+    {'rule': "VP: VP Conj VP", 'ops': "<<<<", "word_cost": 2},
     {'rule': "V': V' PP", 'ops': ""},
     {'rule': "V': V' AdvP", 'ops': ""},
     {'rule': "V': AdvP V'", 'ops': ""},
-    {'rule': "V': TV DP", 'ops': ">"},
+    {'rule': "V': TV DP", 'ops': ">", "word_cost": 1},
     {'rule': "V': DTV DP DP", 'ops': ">"},
-    {'rule': "V': V", 'ops': ""},
+    {'rule': "V': V", 'ops': "", "word_cost": 1},
     #{'rule': "V': V Comp SP", ops: "?"},
 
     # AdvP Rules
     {'rule': "AdvP: Adv'", 'ops': ""},
-    {'rule': "AdvP: AdvP Conj AdvP", 'ops': ""},
-    {'rule': "Adv': Adv' Conj Adv'", 'ops': "++"},
+    {'rule': "AdvP: AdvP Conj AdvP", 'ops': "", "word_cost": 2},
+    {'rule': "Adv': Adv' Conj Adv'", 'ops': "++", "word_cost": 2},
     {'rule': "Adv': AdvP Adv'", 'ops': "["},
-    {'rule': "Adv': Adv", 'ops': "-"},
+    {'rule': "Adv': Adv", 'ops': "-", "word_cost": 1},
 
     # AP Rules
     {'rule': "AP: A'", 'ops': "+"},
-    {'rule': "AP: AP Conj AP", 'ops': "------"}, #?
+    {'rule': "AP: AP Conj AP", 'ops': "------"}, # TODO? do I want this?
     {'rule': "A': A' Conj A'", 'ops': "--"},
     {'rule': "A': AdvP A'", 'ops': "-"},
     #{'rule': "A': A PP", 'ops': ""},
-    {'rule': "A': A", 'ops': "+"},
+    {'rule': "A': A", 'ops': "+", "word_cost": 1},
 
     # PP Rules
     {'rule': "PP: P'", 'ops': ">>"},
-    {'rule': "PP: PP Conj PP", 'ops': ">>>>"},
+    {'rule': "PP: PP Conj PP", 'ops': ">>>>", "word_cost": 2},
     #{'rule': "P': P' PP", 'ops': ""}, #TODO?
-    {'rule': "P': P DP", 'ops': ""},
+    {'rule': "P': P DP", 'ops': "", "word_cost": 1},
     #{'rule': "P': P", 'ops': ""}
 ]
 
@@ -187,6 +187,8 @@ class TreeNode:
         '''
         self.rule_str = rule_dict['rule']
         self.ops = rule_dict['ops']
+        self.word_cost = rule_dict.get('word_cost', 0)
+
         self.l = None
         self.r = None
         self.third = None
@@ -313,6 +315,7 @@ class GraphNode:
         ):
         self.tree = tree
         self.commitments = commitments
+        # ^TODO: make this a stack
         self.node = node
 
         self.neighbors = None
@@ -321,9 +324,26 @@ class GraphNode:
         # choice nodes don't produce rules when we pass through them
 
         self.ops = self.node.ops if not is_choice else None
+        self.ops_path = [c for c in self.ops] if self.ops else []
 
         self.force_recurse_right = force_recurse_right
         self.is_terminal = False
+
+    def add_neighbor(self, neighbors, g):
+        g.ops_path = self.ops_path.copy()
+        if g.ops:
+            # simplify the bf ops
+            ops = [c for c in g.ops]
+            while (ops and g.ops_path and
+                   ((ops[0] == '>' and g.ops_path[-1] == '<') or
+                   (ops[0] == '<' and g.ops_path[-1] == '>') or
+                   (ops[0] == '+' and g.ops_path[-1] == '-') or
+                   (ops[0] == '-' and g.ops_path[-1] == '+')
+                   )):
+                del ops[0]
+                g.ops_path.pop()
+            g.ops_path.extend(ops)
+        neighbors.append(g)
 
     def get_neighbors(self):
         '''
@@ -349,33 +369,25 @@ class GraphNode:
             neighbor_rule = self.node.third
 
         if neighbor_rule is not None:
-            '''
-            neighbors are all the nodes of neighbor rule that have left leaves
-            TODO: and ig, right recursive rules of left rule?
-            '''
             neighbor_rule_nodes = self.tree.nodes[neighbor_rule]
             # ^ all tree nodes that correspond to this rule
 
             for n in neighbor_rule_nodes:
-                #print('an option:', n, n.l_leaf)
                 # add all rules of form (NeighborRule: (Leaf) NR_R)
                 if n.l_leaf:
                     commitments = copy.deepcopy(self.commitments)
                     commitments[-1] += [n]
-                    #print('  the new commitments for this graph node is', commitments)
                     g = GraphNode(self.tree, commitments, n)
-                    neighbors.append(g)
+                    self.add_neighbor(neighbors, g)
 
                 # add all right-recursive choice node rules of form (NR: NR_L NR)
                 if n.is_right_recursive:
-                    #print('  we see a right recursive rule...')
                     # start a new commitment, with a choice node
                     g = GraphNode(self.tree, self.commitments + [[n]], n, is_choice = True)
-                    neighbors.append(g)
+                    self.add_neighbor(neighbors, g)
 
         # exit node
         if self.node.l_leaf and self.node.r_leaf:
-            #print('commitments', self.commitments)
             scope = self.commitments[-1]
             for i, n in enumerate(scope):
                 if i == 0:
@@ -384,14 +396,14 @@ class GraphNode:
                     if len(commitments) == 0:
                         commitments = [[]]
 
-                    # TODO: VP is just hardcoded in here, i don't like that
                     g = None
+                    # allow us to terminate the graph if we want to / restart
                     if commitments == [[]] and n.rule == ROOT_NODE.r:
-                        g = GraphNode(self.tree, commitments, ROOT_NODE, is_choice=True)
-                        self.terminate = True # TODO?
+                        g = GraphNode(self.tree, [[ROOT_NODE]], ROOT_NODE, is_choice=True)
+                        self.is_terminal = True # TODO?
                     else:
                         g = GraphNode(self.tree, commitments, n, force_recurse_right=True)
-                    neighbors.append(g)
+                    self.add_neighbor(neighbors, g)
 
                 # get all left recursive rules in scope
                 n_rules = self.tree.nodes[n.rule]
@@ -401,7 +413,7 @@ class GraphNode:
                     commitments = copy.deepcopy(self.commitments)
                     commitments[-1] = commitments[-1][:i+1]
                     g = GraphNode(self.tree, commitments, n_rule, force_recurse_right=True)
-                    neighbors.append(g)
+                    self.add_neighbor(neighbors, g)
 
         self.neighbors = neighbors
         return neighbors
@@ -423,17 +435,89 @@ class GraphNode:
 #print(T.rules)
 # TODO: rename T.nodes to T.connected_nodes
 
-'''
-idea: the root graph node has this "is_root" attribute which gets passed to the node in the scope
-if something is root, then when we add it as a neighbor in the exit node, we set the graph node back to this "is_root" attribute
-then when we add it's  force recurse right thing, we set this "is_terminal" flag
-if a node has "is_terminal" set, ...
-
-or I just make ROOT_NODE a constant...
-hard code on VP, sure, that worked, and just add the root node as an option again
-'''
-
 root = GraphNode(T, [[ROOT_NODE]], ROOT_NODE, is_choice = True)
+
+from astar import AStar
+from math import inf
+class GraphFinder(AStar):
+
+    #def __init__(self, root):
+    #    self.node = root
+
+    def heuristic_cost_estimate(self, current, goal):
+        '''
+        The number of operations we need to add to the current program
+        to the goal program
+
+        Measure the two programs up to the point of deviance
+        anything after in `curr` must be undone, do those operations in *reverse*
+        then add the remainder goal operations
+
+        increase the cost if we see undo/inverse operations that aren't all unique
+        the cost has to be infinity if we see [ or ] wherever it doesn't belong
+        '''
+        curr = current.ops_path
+        i = 0
+        min_len = min(len(current.ops_path), len(goal))
+        while i < min_len and curr[i] == goal[i]:
+            i += 1
+        # so now curr[i] != goal[i], or we ran out of space
+        undo_ops = curr[i:] # need to undo these operations
+
+        h = len(undo_ops)
+
+        prev_o = undo_ops[0] if len(undo_ops) > 1 else None
+        for o in undo_ops:
+            if o == '[' or o == ']':
+                return inf
+            #if o != prev_o:
+            #    h += 0.2 # TODO: tweak these values, idk
+
+        h += len(goal[i:])
+        print(curr, ' ' * 20, '\r', end='')
+        return h
+
+    def distance_between(self, n1, n2):
+       return 0.1 + n1.node.word_cost
+        # tweak word cost, idk.
+
+    def neighbors(self, node):
+        return node.get_neighbors()
+
+    def is_goal_reached(self, current, goal):
+        current.get_neighbors()
+        #x = input(f'{repr(current)} {current.is_terminal}')
+        return current.ops_path == goal and current.is_terminal
+
+import re
+def find_bf(bf):
+    '''
+    Separate a bf string into the following paths:
+    * `.` as its own symbol
+    * `,` as its own symbol
+    '''
+    bf_strings = [list(s) for s in re.split(r'([.,])', bf) if s]
+    print(bf_strings)
+
+    paths = []
+    for s in bf_strings:
+        if s == [',']:
+            paths.append(',')
+        elif s == ['.']:
+            paths.append('.')
+        else:
+            print('goal:', s)
+            path = GraphFinder().astar(root, s)
+            paths.append(path)
+    return paths
+
+
+#paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
+#paths = find_bf('.+[.+]')
+paths = find_bf('.+[-.++')
+for p in paths:
+    for n in p:
+        print(repr(n), end=' ')
 
 def main():
     curr = root
@@ -447,12 +531,12 @@ def main():
             ]
         print('\n'.join(s))
         print("Current path:", " ".join([f'({n.node.rule_str})' for n in path]))
-        print("commitments", curr.commitments)
+        print(curr.ops_path, curr.is_terminal)
         i = int(input("Choice: ").strip())
         curr = curr.neighbors[i-1]
         print('')
 
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
 

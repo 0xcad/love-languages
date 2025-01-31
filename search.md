@@ -1,11 +1,6 @@
 # search
 the problem of finding our traversal
 
-## 2025-01-25
-assume for the sake of algorithm design that the problem of converting a bf sequence into a collection of sentences that perfectly minimizes the number of words, is an O(n^2) problem.
-
-then observe that I can solve the problem of finding a "good enough" shortest path in anywhere from O(n) to O(n^2); I can just divide the input bf sequence into smaller components of a *constant size*, solve each of those constant size problems in O(c^2) which is a constant, and then string them all together in O(n) time to get a final solution. so if I accept imperfection it's linear, with a constant proportional to how much imperfect I get.
-
 ### more notes:
 caching nodes
 * observe that if I throw out that `path_ops` thing (this could just be an external variable anyways it seems) then all nodes in the graph are equivalent under these values:
@@ -55,6 +50,10 @@ so I guess first steps:
     * modify `get_neigbors` in the graph finder. whenever I see a `target_rule`, look it up in a dict, then return the set that should be all memoized options of that rule...
     * you can probably start memoizing by building up from leaves all trees of a fixed height, then go from there...
 
+# 2025-01-30
+first goal: hash nodes, and make `ops_path` something we store later
+* modified `cache` of search nodes to store the `ops_path`
+
 
 ### rule order search
 the problem with the previous astar algorithm (sentence order search) is that essentially I just have to "get lucky" to find things. and memoization helps me avoid incurring that cost every time, but it's still there. assume I had a operation that was only in a single rule. then I shouldn't be stumbling along a graph, I should know exactly where my operation will build, start with that, and work outwards.
@@ -100,3 +99,10 @@ more notes:
 * let's say again I'm looking for `<<++++>>>`
     * wait, do I start looking for `<` or `+`?
     * what is the actual path? it could look like `<<<< (you and I verb. my nouns verb.) |>>--++++++<(The very lazy dog)>(runs.)|>>> (my nouns verb for your noun).`
+
+## 2025-01-25
+assume for the sake of algorithm design that the problem of converting a bf sequence into a collection of sentences that perfectly minimizes the number of words, is an O(n^2) problem.
+
+then observe that I can solve the problem of finding a "good enough" shortest path in anywhere from O(n) to O(n^2); I can just divide the input bf sequence into smaller components of a *constant size*, solve each of those constant size problems in O(c^2) which is a constant, and then string them all together in O(n) time to get a final solution. so if I accept imperfection it's linear, with a constant proportional to how much imperfect I get.
+
+DONE: added caching on tree notes

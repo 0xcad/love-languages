@@ -90,6 +90,13 @@ class AStar(ABC, Generic[T]):
         """
         raise NotImplementedError
 
+    def path_heuristic_cost_estimate(self, current: SearchNode[T], goal: T) -> float:
+        """
+        Computes the estimated (rough) distance between a node and the goal.
+        The second parameter is always the goal.
+        """
+        return self.heuristic_cost_estimate(current.data, goal)
+
     def distance_between(self, n1: T, n2: T) -> float:
         """
         Gives the real distance between two adjacent nodes n1 and n2 (i.e n2
@@ -157,12 +164,16 @@ class AStar(ABC, Generic[T]):
         openSet: OpenSet[SearchNode[T]] = OpenSet()
         searchNodes: SearchNodeDict[T] = SearchNodeDict()
         startNode = searchNodes[start] = SearchNode(
-            start, gscore=0.0, fscore=self.heuristic_cost_estimate(start, goal)
+            start, gscore=0.0, fscore=None
         )
+        startNode.fscore = self.path_heuristic_cost_estimate(startNode, goal)
         openSet.push(startNode)
 
         while openSet:
             current = openSet.pop()
+            #print('graph node', id(current.data), current.data)
+            #print('tree node', id(current.data.node), current.data.node)
+            #_ = input('')
 
             if self.is_goal_reached(current.data, goal):
                 return self.reconstruct_path(current, reversePath)
@@ -178,20 +189,22 @@ class AStar(ABC, Generic[T]):
                 if gscore >= neighbor.gscore:
                     continue
 
-                fscore = gscore + self.heuristic_cost_estimate(
-                    neighbor.data, goal
+                neighbor.came_from = current
+                fscore = gscore + self.path_heuristic_cost_estimate(
+                    neighbor, goal
                 )
 
                 if neighbor.in_openset:
                     if neighbor.fscore < fscore:
                         # the new path to this node isn't better
+                        neighbor.came_from = None
                         continue
 
                     # we have to remove the item from the heap, as its score has changed
                     openSet.remove(neighbor)
 
                 # update the node
-                neighbor.came_from = current
+                #neighbor.came_from = current
                 neighbor.gscore = gscore
                 neighbor.fscore = fscore
 

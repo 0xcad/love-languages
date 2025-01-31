@@ -60,7 +60,7 @@ import random
 import copy
 
 is_head = lambda X: X is None or not (X.endswith("'") or (len(X) > 1 and X.endswith("P")))
-class TreeNode:
+class RuleNode:
     _cache = {}
 
     def __new__(cls, value):
@@ -107,14 +107,6 @@ class TreeNode:
         #self.words = bool(self.l_head) + bool(self.r_head) # TODO wrong
         #print(rule, ':', self.l, self.r, self.third, '\t', self.l_leaf, self.r_leaf)
 
-    def get_rand_weight(self):
-        weight = 5
-        if "Conj" in self.rule_str:
-            weight -= 4
-        elif self.l_leaf or self.r_leaf:
-            weight += 5 * 2.5
-        return weight
-
     def __str__(self):
         return f"{self.rule}: " + ' '.join([x for x in [self.l, self.r, self.third] if x])
 
@@ -130,7 +122,7 @@ class TreeNode:
     def __hash__(self):
         return hash(self.rule_str)
 
-class Tree:
+class RuleTree:
     '''
     A recursive, binary tree representing all given X-bar rules
     '''
@@ -146,53 +138,11 @@ class Tree:
         self.rules: keys are entire rules, values are the nodes
         '''
         for rule_dict in rule_array:
-            node = TreeNode(rule_dict)
+            node = RuleNode(rule_dict)
             self.nodes[node.rule] = self.nodes.get(node.rule, set()).union(set([node]))
             self.rules[node.rule_str] = node
 
-    def random_traverse(self):
-        '''
-        do an in order traversal of the tree, randomly picking nodes at each choice node
-        '''
-        root = 'SP'
-        visited = {}
-        def helper(root, head=False, depth=0):
-            if root is None:
-                return
-            if head:
-                #print(root)
-                #input(' ' * depth + '**' + root)
-                #print(' ' * depth + '**' + root)
-                print(root, end=' ')
-                return
-
-            nodes = list(self.nodes[root])
-
-            #weights = [1 / visited.get(n.rule_str, 1) for n in nodes]
-            #node = random.choices(nodes, weights=weights)[0]
-
-            weights = [n.get_rand_weight() for n in nodes]
-            node = random.choices(nodes, weights=weights)[0]
-            if depth > 12:
-                for n in nodes:
-                    if n.l_leaf and not n.r:
-                        node = n
-                        break
-            visited[node.rule_str] = visited.get(node.rule_str, 1) + 1
-
-            '''if 'Conj' in node.rule_str:
-                if random.random() < 0.85:
-                    node = random.choice(list(self.nodes[root]))'''
-            helper(node.l, node.l_leaf, depth + 1)
-            #print(node)
-            #input(' ' * depth + str(node))
-            #print(' ' * depth + str(node))
-            helper(node.r, node.r_leaf, depth + 1)
-            helper(node.third, depth=depth+1)
-
-        helper(root)
-
-T = Tree(rules)
+T = RuleTree(rules)
 ROOT_NODE = T.rules['SP: DP VP']
 
 class GraphNode:
@@ -203,14 +153,25 @@ class GraphNode:
     1. What rule / tree node is it
     2. Choice node (left recursive / start) or not
     '''
+    _cache = {}
+    _tree = T
+
+    def __new__(cls, commitments, node, **kwargs):
+        h = cls._hash(commitments, node, kwargs)
+        if h in cls._cache:
+            return cls._cache[h]
+
+        instance = super().__new__(cls)
+        cls._cache[h] = instance
+        instance.hash = h
+        return instance
+
     def __init__(self,
-            tree : Tree,
             commitments : list[list], # stack of stacks
-            node : TreeNode,
+            node : RuleNode,
             is_choice : bool = False,
             force_recurse_right : bool = False,
         ):
-        self.tree = tree
         self.commitments = commitments
         self.node = node
 
@@ -256,7 +217,7 @@ class GraphNode:
             target_rule = self.node.third
 
         if target_rule is not None:
-            target_rule_nodes = self.tree.nodes[target_rule]
+            target_rule_nodes = self._tree.nodes[target_rule]
             # ^ all tree nodes that correspond to this rule
 
             for n in target_rule_nodes:
@@ -265,13 +226,13 @@ class GraphNode:
                     #commitments = copy.deepcopy(self.commitments)
                     commitments = self.copy_commitments()
                     commitments[-1] += [n]
-                    g = GraphNode(self.tree, commitments, n)
+                    g = GraphNode(commitments, n)
                     self.add_neighbor(neighbors, g)
 
                 # add all right-recursive choice node rules of form (NR: NR_L NR)
                 if n.is_right_recursive:
                     # start a new commitment, with a choice node
-                    g = GraphNode(self.tree, self.commitments + [[n]], n, is_choice = True)
+                    g = GraphNode(self.commitments + [[n]], n, is_choice = True)
                     self.add_neighbor(neighbors, g)
 
         # exit node
@@ -283,7 +244,7 @@ class GraphNode:
                 # allow us to terminate the graph if we want to / restart
                 if n is None:
                     self.is_terminal = True # TODO?
-                    g = GraphNode(self.tree, [[ROOT_NODE]], ROOT_NODE, is_choice=True)
+                    g = GraphNode([[ROOT_NODE]], ROOT_NODE, is_choice=True)
                     self.add_neighbor(neighbors, g)
                     continue
                 # exit a current scope to some other one
@@ -293,18 +254,18 @@ class GraphNode:
                     commitments.pop()
                     if len(commitments) == 0:
                         commitments = [[None]]
-                    g = GraphNode(self.tree, commitments, n, force_recurse_right=True)
+                    g = GraphNode(commitments, n, force_recurse_right=True)
                     self.add_neighbor(neighbors, g)
 
                 # get all left recursive rules in scope
-                n_rules = self.tree.nodes[n.rule]
+                n_rules = self._tree.nodes[n.rule]
                 for n_rule in n_rules:
                     if not n_rule.is_left_recursive:
                         continue
                     #commitments = copy.deepcopy(self.commitments)
                     commitments = self.copy_commitments()
                     commitments[-1] = commitments[-1][:i+1]
-                    g = GraphNode(self.tree, commitments, n_rule, force_recurse_right=True)
+                    g = GraphNode(commitments, n_rule, force_recurse_right=True)
                     self.add_neighbor(neighbors, g)
 
         self.neighbors = neighbors
@@ -331,14 +292,18 @@ class GraphNode:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def _hash(self, node, commitments, **kwargs):
+        return hash((node, str(commitments), kwargs.get("is_choice", False), kwargs.get("force_recurse_right", False)))
+
     def __hash__(self):
-        return hash((self.node, str(self.commitments), self.is_choice, self.force_recurse_right))
+        return self.hash
+        #return hash((self.node, str(self.commitments), self.is_choice, self.force_recurse_right))
 
 
 #print(T.nodes)
 #print(T.rules)
 
-root = GraphNode(T, [[ROOT_NODE]], ROOT_NODE, is_choice = True)
+root = GraphNode([[ROOT_NODE]], ROOT_NODE, is_choice = True)
 
 from astar import AStar
 from math import inf

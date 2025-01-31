@@ -106,3 +106,16 @@ assume for the sake of algorithm design that the problem of converting a bf sequ
 then observe that I can solve the problem of finding a "good enough" shortest path in anywhere from O(n) to O(n^2); I can just divide the input bf sequence into smaller components of a *constant size*, solve each of those constant size problems in O(c^2) which is a constant, and then string them all together in O(n) time to get a final solution. so if I accept imperfection it's linear, with a constant proportional to how much imperfect I get.
 
 DONE: added caching on tree notes
+
+# 2025-01-31
+TODO:
+* add memoization to phrases, and put those in the tree
+    * on the heuristic function, detect if a node is an exit node
+    * if it's an exit node, then we need to follow a series of `came_from` nodes to reconstruct the tree. write a function to do this
+    * write a generic class that will take objects, and store them in a binary tree. use this above
+    * memoize all the ancestors of the exit node and their completed trees
+    * in the `get_neighbors` function, look at the node's current `target_node`. add all of the memoized neighbors that we saw earlier
+    * experiment with a variety of things, including if we memoize small trees first and then do the search, the max depth of memoization for trees (that might be really important), a more efficient way to tell if a tree is complete. we'll probably need doubly linked trees, too I'm guessing...
+
+DONE:
+* added caching on graph nodes

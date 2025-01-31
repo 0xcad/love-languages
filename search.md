@@ -119,3 +119,4 @@ TODO:
 
 DONE:
 * added caching on graph nodes
+* reorganized rules and rule trees

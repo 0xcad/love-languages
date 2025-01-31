@@ -61,14 +61,21 @@ import copy
 
 is_head = lambda X: X is None or not (X.endswith("'") or (len(X) > 1 and X.endswith("P")))
 class RuleNode:
-    _cache = {}
+    '''
+    A class wrapper for rule dictionaries
+    A recursive, binary tree representing all given X-bar
+    rules/ key: rule strings / values: RuleNode objects
+    nodes/ key: string X     / values: a set containing all RuleNodes X: W Y
+    '''
+    rules = {}
+    nodes = {}
 
     def __new__(cls, value):
         key = value.get('rule')
-        if key in cls._cache:
-            return cls._cache[key]
+        if key in cls.rules:
+            return cls.rules[key]
         instance = super().__new__(cls)
-        cls._cache[key] = instance
+        cls.rules[key] = instance
         return instance
 
     def __init__(self, rule_dict : dict):
@@ -104,8 +111,10 @@ class RuleNode:
         self.is_left_recursive = rule == self.l
 
         self.rule = rule
-        #self.words = bool(self.l_head) + bool(self.r_head) # TODO wrong
         #print(rule, ':', self.l, self.r, self.third, '\t', self.l_leaf, self.r_leaf)
+
+        # add it to class nodes
+        self.nodes[self.rule] = self.nodes.get(self.rule, set()).union(set([self]))
 
     def __str__(self):
         return f"{self.rule}: " + ' '.join([x for x in [self.l, self.r, self.third] if x])
@@ -122,28 +131,12 @@ class RuleNode:
     def __hash__(self):
         return hash(self.rule_str)
 
-class RuleTree:
-    '''
-    A recursive, binary tree representing all given X-bar rules
-    '''
-    def __init__(self, rule_array : list[dict]):
-        self.nodes = {}
-        self.rules = {}
-        self.add_nodes(rule_array)
 
-    def add_nodes(self, rule_array):
-        '''
-        initializes a dictionary of nodes and rules
-        self.nodes: keys are "choice nodes", values are the set of nodes that can be chosen
-        self.rules: keys are entire rules, values are the nodes
-        '''
-        for rule_dict in rule_array:
-            node = RuleNode(rule_dict)
-            self.nodes[node.rule] = self.nodes.get(node.rule, set()).union(set([node]))
-            self.rules[node.rule_str] = node
+# create all of our rules
+for rule_dict in rules:
+    RuleNode(rule_dict)
 
-T = RuleTree(rules)
-ROOT_NODE = T.rules['SP: DP VP']
+ROOT_NODE = RuleNode.rules['SP: DP VP']
 
 class GraphNode:
     '''
@@ -154,7 +147,7 @@ class GraphNode:
     2. Choice node (left recursive / start) or not
     '''
     _cache = {}
-    _tree = T
+    _tree = RuleNode
 
     def __new__(cls, commitments, node, **kwargs):
         h = cls._hash(commitments, node, kwargs)
@@ -424,7 +417,7 @@ def main():
             ]
         print('\n'.join(s))
         print("Current path:", " ".join([f'({n.node.rule_str})' for n in path]))
-        print(curr.ops_path, curr.is_exit, curr.node, id(curr.node))
+        print(curr.ops_path, curr.is_exit)
         i = int(input("Choice: ").strip())
         curr = curr.neighbors[i-1]
         print('')

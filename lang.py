@@ -1,7 +1,7 @@
 
 rules = [
     #{'rule': "SP: AnyDP VP", 'ops': ""},
-    {'rule': "SP: DP VP", 'ops': ""},
+    {'rule': "SP: DP VP", 'ops': "", "root": True},
 
     # TODO: this will actually work, I should just also add an additional key/value for the actual rule string, and if something should be "counted" or not, i.e printed out in our tree
     #{'rule': "AnyDP: DP", 'ops': ""},
@@ -69,6 +69,7 @@ class RuleNode:
     '''
     rules = {}
     nodes = {}
+    root = None
 
     def __new__(cls, value):
         key = value.get('rule')
@@ -83,6 +84,8 @@ class RuleNode:
         for rule_dict in rules:
             node = RuleNode(rule_dict)
             cls.nodes[node.rule] = cls.nodes.get(node.rule, set()).union(set([node]))
+            if node.is_root:
+                cls.root = node
 
     def __init__(self, rule_dict : dict):
         '''
@@ -92,6 +95,7 @@ class RuleNode:
         self.rule_str = rule_dict['rule']
         self.ops = rule_dict['ops']
         self.word_cost = rule_dict.get('word_cost', 0)
+        self.is_root = rule_dict.get('root', False)
 
         self.l = None
         self.r = None
@@ -138,7 +142,7 @@ class RuleNode:
 # create all of our rules
 RuleNode.construct_from_rules(rules)
 
-ROOT_NODE = RuleNode.rules['SP: DP VP']
+ROOT_NODE = RuleNode.root
 
 class GraphNode:
     '''
@@ -151,7 +155,7 @@ class GraphNode:
     _cache = {}
     _tree = RuleNode
 
-    def __new__(cls, commitments, node, **kwargs):
+    '''def __new__(cls, commitments, node, **kwargs):
         h = cls._hash(commitments, node, kwargs)
         if h in cls._cache:
             return cls._cache[h]
@@ -159,7 +163,7 @@ class GraphNode:
         instance = super().__new__(cls)
         cls._cache[h] = instance
         instance.hash = h
-        return instance
+        return instance'''
 
     def __init__(self,
             commitments : list[list], # stack of stacks
@@ -277,7 +281,7 @@ class GraphNode:
             return 'choice node: ' + repr(self.node)
         return repr(self.node)
 
-    def __eq__(self, other):
+    '''def __eq__(self, other):
         return (other and
                 self.node == other.node and
                 self.commitments == other.commitments and
@@ -291,7 +295,7 @@ class GraphNode:
         return hash((node, str(commitments), kwargs.get("is_choice", False), kwargs.get("force_recurse_right", False)))
 
     def __hash__(self):
-        return self.hash
+        return self.hash'''
         #return hash((self.node, str(self.commitments), self.is_choice, self.force_recurse_right))
 
 class TreeNode:
@@ -422,6 +426,8 @@ class TreeNode:
         '''
         Copy the subtree *and* copy up to the root, as well. Return a pointer just to the copy of `tree` though
         '''
+        if not tree:
+            return tree
         new = cls.copy_subtree(tree)
 
         curr = new
@@ -487,6 +493,26 @@ class TreeNode:
         node.left = curr # insert curr as left child of node
         return node
 
+    @classmethod
+    def find_right_recursive(cls, tree):
+        '''
+        Return the next ancestor that has a left node
+        '''
+        if tree.left:
+            return tree
+
+        c = tree
+        while c and c.parent is not None:
+            if c.is_left_child:
+                c.parent.left = c
+                return c.parent
+            elif c.is_right_child:
+                c.parent.right = c
+            elif c.is_third_child:
+                c.parent.third = c
+            c = c.parent
+        raise Exception("find right recursive failed")
+
 
 
 root = GraphNode([[ROOT_NODE]], ROOT_NODE, is_choice = True)
@@ -502,12 +528,15 @@ class GraphFinder(AStar):
         ## FIRST, GENERATE OPS PATH
         came_from = current.came_from
         if came_from is None:
-            current.cache = [[], TreeNode(current.data.node)]
+            current.cache = [[], None]
         else:
             # current.cache = came_from.cache.copy()
             ops_path, parent_tree = came_from.cache
-            #current.cache = [ops_path.copy(), TreeNode.copy_tree(tree)]
-            current.cache = [ops_path.copy(), parent_tree]
+            if current.data.is_choice and current.data.node == RuleNode.root:
+                current.cache = [ops_path.copy(), None]
+            else:
+                current.cache = [ops_path.copy(), TreeNode.copy_tree(parent_tree)]
+            #current.cache = [ops_path.copy(), parent_tree]
 
         ops_path, parent_tree = current.cache
         '''
@@ -533,15 +562,15 @@ class GraphFinder(AStar):
         #if current.data.is_exit:
         #    print('this is an exit node!')
 
-        #print("Path (reverse order):")
+        '''print("Path (reverse order):")
         c = came_from
         i = 0
-        #print(repr(current.data.node), end=' || ')
+        print(repr(current.data.node), end=' || ')
         while c and i < 10:
-            #print(repr(c.data), end=" || ")
+            print(repr(c.data), end=" || ")
             c = c.came_from
             i += 1
-        #print('')
+        print('')'''
 
         #print(current.data.commitments)
         '''
@@ -550,7 +579,9 @@ class GraphFinder(AStar):
             * but stop, as soon as the tree becomes incomplete
             * then memoize the tree and its phrases
         '''
-        if came_from:
+        if parent_tree is None:
+            current_node = TreeNode(current.data.node)
+        elif came_from:
             if current.data.force_recurse_right:
                 if not current.data.node.is_left_recursive:
                     pass
@@ -562,10 +593,7 @@ class GraphFinder(AStar):
                 parent_tree.left = current_node
                 current_node.is_left_child = True
             elif came_from.data.force_recurse_right: # insert to the right of prev area...
-                p = parent_tree
-                #while p and p.right is not None:
-                while p and not p.left: # go up to next node that has a left child...
-                    p = p.parent
+                p = TreeNode.find_right_recursive(parent_tree)
                 current_node = TreeNode(current.data.node, parent=p)
                 p.right = current_node
                 current_node.is_right_child = True
@@ -573,7 +601,6 @@ class GraphFinder(AStar):
                 current_node = TreeNode(current.data.node, parent=parent_tree)
                 parent_tree.right = current_node
                 current_node.is_right_child = True
-        #print(tree.get_root())
 
         #print('root')
         #print(current_node.get_root_and_correct_parents())
@@ -625,11 +652,15 @@ class GraphFinder(AStar):
         return 0.1 + 0.9 * n2.node.word_cost
 
     def neighbors(self, node):
+        n = node.get_neighbors()
         return node.get_neighbors()
 
-    def is_goal_reached(self, current, goal):
-        current.get_neighbors()
-        return current.ops_path == goal and current.is_terminal
+    def path_is_goal_reached(self, current, goal):
+        current.data.get_neighbors()
+        is_reached = current.cache[0] == goal and current.data.is_terminal
+        if is_reached:
+            print(current.cache[1].get_root())
+        return is_reached
 
 import re
 def find_bf(bf):
@@ -654,17 +685,7 @@ def find_bf(bf):
     return paths
 
 
-def main():
-
-    paths = find_bf('>>')
-    #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
-    #paths = find_bf('.+[.+]')
-    print(paths)
-    #for p in paths:
-        #for n in p:
-        #    print(repr(n), end=' ')
-
-
+def choice_search():
     curr = root
     path = []
     while curr.get_neighbors():
@@ -680,6 +701,19 @@ def main():
         i = int(input("Choice: ").strip())
         curr = curr.neighbors[i-1]
         print('')
+
+def main():
+
+    paths = find_bf('++++++')
+    #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
+    #paths = find_bf('.+[.+]')
+    for p in paths:
+        for n in p:
+            print(repr(n), end=' ')
+    print('')
+
+
+    #choice_search()
 
 
 if __name__ == '__main__':

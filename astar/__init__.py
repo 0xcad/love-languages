@@ -143,6 +143,13 @@ class AStar(ABC, Generic[T]):
         """
         return current == goal
 
+    def path_is_goal_reached(self, current: SearchNode[T], goal: T) -> bool:
+        """
+        Computes the estimated (rough) distance between a node and the goal.
+        The second parameter is always the goal.
+        """
+        return self.is_goal_reached(current.data, goal)
+
     def reconstruct_path(self, last: SearchNode, reversePath=False) -> Iterable[T]:
         def _gen():
             current = last
@@ -175,7 +182,7 @@ class AStar(ABC, Generic[T]):
             #print('tree node', id(current.data.node), current.data.node)
             #_ = input('')
 
-            if self.is_goal_reached(current.data, goal):
+            if self.path_is_goal_reached(current, goal):
                 return self.reconstruct_path(current, reversePath)
 
             current.closed = True

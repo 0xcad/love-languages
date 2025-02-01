@@ -149,3 +149,6 @@ ugh, left recursive rules are awful. we need to go back up the tree, and insert 
 * ^done that, but I only copied a subtree. anyways though, another problem, that I'm not sure is dependent on left recursive nodes or whatever...
     * the previous solution, where we climb up `parents` and correct children, works great. except it can only correct up to descendents of parents. if we backtrack up and a node is like, a cousin of another node, the cousin could be wrong.
     * so still, if we go to like, the right VP, then backtrack so we're back on the other side of the tree again, our tree is incorrect
+
+TODO:
+* looks like hashing introduced a bug where it would stop searching visited nodes -- even if they're being seen in new contexts...

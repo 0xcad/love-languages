@@ -78,6 +78,12 @@ class RuleNode:
         cls.rules[key] = instance
         return instance
 
+    @classmethod
+    def construct_from_rules(cls, rule_array):
+        for rule_dict in rules:
+            node = RuleNode(rule_dict)
+            cls.nodes[node.rule] = cls.nodes.get(node.rule, set()).union(set([node]))
+
     def __init__(self, rule_dict : dict):
         '''
         Given a dictionary in the form
@@ -105,16 +111,13 @@ class RuleNode:
                 self.third = children[2] if len(children) > 2 else None
 
 
-        self.l_leaf = is_head(self.l)
-        self.r_leaf = is_head(self.r)
+        self.is_l_leaf = is_head(self.l)
+        self.is_r_leaf = is_head(self.r)
         self.is_right_recursive = rule == self.r
         self.is_left_recursive = rule == self.l
 
         self.rule = rule
         #print(rule, ':', self.l, self.r, self.third, '\t', self.l_leaf, self.r_leaf)
-
-        # add it to class nodes
-        self.nodes[self.rule] = self.nodes.get(self.rule, set()).union(set([self]))
 
     def __str__(self):
         return f"{self.rule}: " + ' '.join([x for x in [self.l, self.r, self.third] if x])
@@ -133,8 +136,7 @@ class RuleNode:
 
 
 # create all of our rules
-for rule_dict in rules:
-    RuleNode(rule_dict)
+RuleNode.construct_from_rules(rules)
 
 ROOT_NODE = RuleNode.rules['SP: DP VP']
 
@@ -178,9 +180,9 @@ class GraphNode:
 
         self.force_recurse_right = force_recurse_right
         self.is_terminal = False
-        self.is_exit = self.node.l_leaf and self.node.r_leaf
+        self.is_exit = self.node.is_l_leaf and self.node.is_r_leaf
 
-    def add_neighbor(self, neighbors, g):
+    def _add_neighbor(self, neighbors, g):
         neighbors.append(g)
 
     def copy_commitments(self):
@@ -202,9 +204,9 @@ class GraphNode:
         neighbors = []
 
         target_rule = None
-        if not(self.force_recurse_right) and not self.node.l_leaf:
+        if not(self.force_recurse_right) and not self.node.is_l_leaf:
             target_rule = self.node.l
-        elif not self.node.r_leaf:
+        elif not self.node.is_r_leaf:
             target_rule = self.node.r
         elif self.node.third:
             target_rule = self.node.third
@@ -215,18 +217,18 @@ class GraphNode:
 
             for n in target_rule_nodes:
                 # add all rules of form (NeighborRule: (Leaf) NR_R)
-                if n.l_leaf:
+                if n.is_l_leaf:
                     #commitments = copy.deepcopy(self.commitments)
                     commitments = self.copy_commitments()
                     commitments[-1] += [n]
                     g = GraphNode(commitments, n)
-                    self.add_neighbor(neighbors, g)
+                    self._add_neighbor(neighbors, g)
 
                 # add all right-recursive choice node rules of form (NR: NR_L NR)
                 if n.is_right_recursive:
                     # start a new commitment, with a choice node
                     g = GraphNode(self.commitments + [[n]], n, is_choice = True)
-                    self.add_neighbor(neighbors, g)
+                    self._add_neighbor(neighbors, g)
 
         # exit node
         if self.is_exit:
@@ -238,7 +240,7 @@ class GraphNode:
                 if n is None:
                     self.is_terminal = True # TODO?
                     g = GraphNode([[ROOT_NODE]], ROOT_NODE, is_choice=True)
-                    self.add_neighbor(neighbors, g)
+                    self._add_neighbor(neighbors, g)
                     continue
                 # exit a current scope to some other one
                 elif i == 0:
@@ -248,7 +250,7 @@ class GraphNode:
                     if len(commitments) == 0:
                         commitments = [[None]]
                     g = GraphNode(commitments, n, force_recurse_right=True)
-                    self.add_neighbor(neighbors, g)
+                    self._add_neighbor(neighbors, g)
 
                 # get all left recursive rules in scope
                 n_rules = self._tree.nodes[n.rule]
@@ -259,7 +261,7 @@ class GraphNode:
                     commitments = self.copy_commitments()
                     commitments[-1] = commitments[-1][:i+1]
                     g = GraphNode(commitments, n_rule, force_recurse_right=True)
-                    self.add_neighbor(neighbors, g)
+                    self._add_neighbor(neighbors, g)
 
         self.neighbors = neighbors
         return neighbors
@@ -292,9 +294,89 @@ class GraphNode:
         return self.hash
         #return hash((self.node, str(self.commitments), self.is_choice, self.force_recurse_right))
 
+class TreeNode:
+    def __init__(self, data, left=None, right=None, parent=None):
+        self.data = data
+        self.left = left
+        self.right = right
+        self.parent = parent
 
-#print(T.nodes)
-#print(T.rules)
+        if type(data) == RuleNode:
+            if data.is_l_leaf:
+                self.left = False
+            if data.is_r_leaf:
+                self.right = False
+
+        self._is_complete = None
+
+    @property
+    def is_complete(self):
+        if self._is_complete is not None:
+            return self._is_complete
+        self._is_complete = (
+                (self.left is False or self.left and self.left.is_complete) and
+                (self.right is False or self.right and self.right_is_complete)
+        )
+        if self._is_complete:
+            self.parent.update_is_complete()
+        return self._is_complete
+
+    def update_is_complete(self):
+        '''
+        this node is now complete, so recalculate is_complete for the parent node
+        '''
+        self._is_complete = None
+        self.is_complete()
+
+    @property
+    def height(self):
+        # TODO ?
+        pass
+
+    def __hash__(self):
+        if not self.is_complete:
+            raise Exception('hashing incomplete tree...')
+        return hash((hash(self.left), hash(self.data), hash(self.right)))
+
+    def __str__(self):
+        def helper(node, depth=1):
+            if node is None:
+                return "incomplete"
+            elif node is False:
+                return "leaf"
+            s = [f'{repr(node.data)} -> parent {repr(node.parent.data) if node.parent else "root"}']
+            bullet = '*' if depth % 2 else '>'
+            s.append(f'{" " * depth * 2}{bullet} {helper(node.left, depth +1)}')
+            s.append(f'{" " * depth * 2}{bullet} {helper(node.right, depth +1)}')
+            return '\n'.join(s)
+        return helper(self)
+
+    def get_root(self):
+        if not self.parent:
+            return self
+        c = self
+        while c and c.parent is not None:
+            c = c.parent
+        return c
+
+    @classmethod
+    def copy_tree(cls, tree):
+        if not tree:
+            return tree
+        left = cls.copy_tree(tree.left)
+        right = cls.copy_tree(tree.right)
+        new = TreeNode(tree.data)
+        if left:
+            left.parent = new
+        if right:
+            right.parent = new
+        new.left = left
+        new.right = right
+        new.parent = tree.parent
+        #if tree.parent:
+        #    tree.parent.left = # do we set the left child, or the right child?
+        return new
+
 
 root = GraphNode([[ROOT_NODE]], ROOT_NODE, is_choice = True)
 
@@ -302,32 +384,89 @@ from astar import AStar
 from math import inf
 class GraphFinder(AStar):
 
+    _tree = None
+
     def path_heuristic_cost_estimate(self, current, goal):
         '''
         store the ops path in cache
         '''
-
         ## FIRST, GENERATE OPS PATH
         came_from = current.came_from
         if came_from is None:
-            current.cache = []
+            current.cache = [[], TreeNode(current.data.node)]
         else:
-            current.cache = came_from.cache.copy()
+            # current.cache = came_from.cache.copy()
+            ops_path, tree = came_from.cache
+            #current.cache = [ops_path.copy(), TreeNode.copy_tree(tree)]
+            current.cache = [ops_path.copy(), tree]
+
+        ops_path, tree = current.cache
+
+        print('current', id(current))
+        print('came_from', id(came_from))
 
         if current.data.ops:
             ops = [c for c in current.data.ops]
-            while (ops and current.cache and
-                   ((ops[0] == '>' and current.cache[-1] == '<') or
-                   (ops[0] == '<' and current.cache[-1] == '>') or
-                   (ops[0] == '+' and current.cache[-1] == '-') or
-                   (ops[0] == '-' and current.cache[-1] == '+')
+            while (ops and ops_path and
+                   ((ops[0] == '>' and ops_path[-1] == '<') or
+                   (ops[0] == '<' and ops_path[-1] == '>') or
+                   (ops[0] == '+' and ops_path[-1] == '-') or
+                   (ops[0] == '-' and ops_path[-1] == '+')
                    )):
                 del ops[0]
-                current.cache.pop()
-            current.cache.extend(ops)
+                ops_path.pop()
+            ops_path.extend(ops)
+
+        #if current.data.is_exit:
+        #    print('this is an exit node!')
+
+        print("Path (reverse order):")
+        c = came_from
+        i = 0
+        print(repr(current.data.node), end=' || ')
+        while c and i < 10:
+            print(repr(c.data), end=" || ")
+            c = c.came_from
+            i += 1
+        print('')
+
+        #print(current.data.commitments)
+        #print('is choice', current.data.is_choice)
+        #print('force recurse right', current.data.force_recurse_right)
+        '''
+        if the node is an exit node:
+            * convert the node and what came before it into a tree
+            * but stop, as soon as the tree becomes incomplete
+            * then memoize the tree and its phrases
+        '''
+        if came_from:
+            if came_from.data.is_choice: # insert to the left
+                print('inserting to left')
+                current_node = TreeNode(current.data.node, parent=tree)
+                tree.left = current_node
+                tree = current_node
+            elif came_from.data.force_recurse_right: # insert to the right of prev area...
+                print('forcing recurse right')
+                parent_node = tree
+                while parent_node.right is not None:
+                    parent_node = parent_node.parent
+                current_node = TreeNode(current.data.node, parent=parent_node)
+                parent_node.right = current_node
+                tree = current_node
+            else: # insert to the right
+                print('inserting to right of parent', came_from.data.node)
+                current_node = TreeNode(current.data.node, parent=tree)
+                tree.right = current_node
+                tree = current_node
+        #print(tree.get_root())
+
+        print(tree.get_root())
+        current.cache[1] = tree
+
+        _ = input("")
 
         ## NOW, DO HEURISTIC
-        return self.heuristic_cost_estimate(current.cache, goal)
+        return self.heuristic_cost_estimate(ops_path, goal)
 
     def heuristic_cost_estimate(self, curr, goal):
         '''
@@ -372,7 +511,6 @@ class GraphFinder(AStar):
 
     def is_goal_reached(self, current, goal):
         current.get_neighbors()
-        #x = input(f'{repr(current)} {current.is_terminal}')
         return current.ops_path == goal and current.is_terminal
 
 import re
@@ -398,14 +536,16 @@ def find_bf(bf):
     return paths
 
 
-'''paths = find_bf('<<<<<')
-#paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
-#paths = find_bf('.+[.+]')
-for p in paths:
-    for n in p:
-        print(repr(n), end=' ')'''
-
 def main():
+
+    paths = find_bf('>>++++')
+    #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
+    #paths = find_bf('.+[.+]')
+    for p in paths:
+        for n in p:
+            print(repr(n), end=' ')
+
+
     curr = root
     path = []
     while curr.get_neighbors():

@@ -120,3 +120,21 @@ TODO:
 DONE:
 * added caching on graph nodes
 * reorganized rules and rule trees
+
+building trees in graph searches:
+* I think every search node has to have its own tree, unfortunately
+* the data in trees are rules
+* oh wait wait we can do this better. each nodes tree is the same as the prev one? that lowkey doesn't actually work though because of backtracking... but hell, I'll just try it anyways and if I have to use copy then so be it
+* we probably have to do the same stack thing, where we keep a stack of all trees
+
+I forgot we have more information available to us:
+* if an element is a force recurse right node, don't put it in the tree
+    * lemma: there can only be one FRRN in a tree at a given time? yeah that seems right
+* if the previous element is a choice node, put it to the left of the prev element tree
+* if the previous element is FRR, then go up in the prev tree until there's a valid spot ot insert, insert it there (which will be on the right)
+* otherwise, insert it as the right child as the previous tree
+
+TODO: fix copy function, reason over changing the tree parent's children when we do "came_from" (it's confusing, whatever...)
+
+# 2025-02-01
+I have a theory that I don't need to ever make a `copy` of the tree -- but I do need to make copies of the pointers at each element. each node points to where in the tree it lives, and we just re-write the tree on backtracking. to be safe with this, at each node we should also set the left/right children to be None or something, if they're truthy, before doing any operations...

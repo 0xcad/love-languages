@@ -155,7 +155,7 @@ class GraphNode:
     _cache = {}
     _tree = RuleNode
 
-    '''def __new__(cls, commitments, node, **kwargs):
+    def __new__(cls, commitments, node, **kwargs):
         h = cls._hash(commitments, node, kwargs)
         if h in cls._cache:
             return cls._cache[h]
@@ -163,7 +163,7 @@ class GraphNode:
         instance = super().__new__(cls)
         cls._cache[h] = instance
         instance.hash = h
-        return instance'''
+        return instance
 
     def __init__(self,
             commitments : list[list], # stack of stacks
@@ -281,7 +281,7 @@ class GraphNode:
             return 'choice node: ' + repr(self.node)
         return repr(self.node)
 
-    '''def __eq__(self, other):
+    def __eq__(self, other):
         return (other and
                 self.node == other.node and
                 self.commitments == other.commitments and
@@ -291,11 +291,11 @@ class GraphNode:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def _hash(self, node, commitments, **kwargs):
+    def _hash(commitments, node, kwargs):
         return hash((node, str(commitments), kwargs.get("is_choice", False), kwargs.get("force_recurse_right", False)))
 
     def __hash__(self):
-        return self.hash'''
+        return self.hash
         #return hash((self.node, str(self.commitments), self.is_choice, self.force_recurse_right))
 
 class TreeNode:
@@ -513,6 +513,31 @@ class TreeNode:
             c = c.parent
         raise Exception("find right recursive failed")
 
+class GraphSearchNode:
+    '''
+    A wrapper for graph nodes and ops_path
+    Does not hash, or no equality...
+    '''
+    def __init__(self, gn, ops_path):
+        self.gn = gn
+        self.ops_path = ops_path
+
+    def add_ops(self, ops):
+        '''
+        Merge ops with our own ops_path
+        '''
+        if ops:
+            ops = [c for c in ops]
+            while (ops and self.ops_path and
+                   ((ops[0] == '>' and self.ops_path[-1] == '<') or
+                   (ops[0] == '<' and self.ops_path[-1] == '>') or
+                   (ops[0] == '+' and self.ops_path[-1] == '-') or
+                   (ops[0] == '-' and self.ops_path[-1] == '+')
+                   )):
+                del ops[0]
+                self.ops_path.pop()
+            self.ops_path.extend(ops)
+        return self.ops_path
 
 
 root = GraphNode([[ROOT_NODE]], ROOT_NODE, is_choice = True)
@@ -522,23 +547,17 @@ from math import inf
 class GraphFinder(AStar):
 
     def path_heuristic_cost_estimate(self, current, goal):
-        '''
-        store the ops path in cache
-        '''
-        ## FIRST, GENERATE OPS PATH
-        came_from = current.came_from
-        if came_from is None:
-            current.cache = [[], None]
-        else:
-            # current.cache = came_from.cache.copy()
-            ops_path, parent_tree = came_from.cache
-            if current.data.is_choice and current.data.node == RuleNode.root:
-                current.cache = [ops_path.copy(), None]
-            else:
-                current.cache = [ops_path.copy(), TreeNode.copy_tree(parent_tree)]
-            #current.cache = [ops_path.copy(), parent_tree]
+        gn = current.data.gn
+        current_rule = gn.node
 
-        ops_path, parent_tree = current.cache
+        came_from = current.came_from
+        if came_from is None or (gn.is_choice and current_rule == RuleNode.root):
+            print('restarting')
+            current.cache = None
+        else:
+            current.cache = TreeNode.copy_tree(came_from.cache)
+
+        parent_tree = current.cache
         '''
         Generate the tree
         '''
@@ -547,30 +566,18 @@ class GraphFinder(AStar):
         #print('current', id(current))
         #print('came_from', id(came_from))
 
-        if current.data.ops:
-            ops = [c for c in current.data.ops]
-            while (ops and ops_path and
-                   ((ops[0] == '>' and ops_path[-1] == '<') or
-                   (ops[0] == '<' and ops_path[-1] == '>') or
-                   (ops[0] == '+' and ops_path[-1] == '-') or
-                   (ops[0] == '-' and ops_path[-1] == '+')
-                   )):
-                del ops[0]
-                ops_path.pop()
-            ops_path.extend(ops)
-
         #if current.data.is_exit:
         #    print('this is an exit node!')
 
-        '''print("Path (reverse order):")
+        print("Path (reverse order):")
         c = came_from
         i = 0
-        print(repr(current.data.node), end=' || ')
+        print(repr(gn), end=' || ')
         while c and i < 10:
-            print(repr(c.data), end=" || ")
+            print(repr(c.data.gn), end=" || ")
             c = c.came_from
             i += 1
-        print('')'''
+        print('')
 
         #print(current.data.commitments)
         '''
@@ -580,38 +587,39 @@ class GraphFinder(AStar):
             * then memoize the tree and its phrases
         '''
         if parent_tree is None:
-            current_node = TreeNode(current.data.node)
+            current_node = TreeNode(current_rule)
         elif came_from:
-            if current.data.force_recurse_right:
-                if not current.data.node.is_left_recursive:
+            if gn.force_recurse_right:
+                if not current_rule.is_left_recursive:
                     pass
                 else: # climb up tree to where I can insert the copied node
                     #parent_tree = TreeNode.copy_tree(parent_tree)
-                    current_node = TreeNode.insert_left_recursive_node(parent_tree, TreeNode(current.data.node))
-            elif came_from.data.is_choice: # insert to the left
-                current_node = TreeNode(current.data.node, parent=parent_tree)
+                    current_node = TreeNode.insert_left_recursive_node(parent_tree, TreeNode(current_rule))
+            elif came_from.data.gn.is_choice: # insert to the left
+                current_node = TreeNode(current_rule, parent=parent_tree)
                 parent_tree.left = current_node
                 current_node.is_left_child = True
-            elif came_from.data.force_recurse_right: # insert to the right of prev area...
+            elif came_from.data.gn.force_recurse_right: # insert to the right of prev area...
                 p = TreeNode.find_right_recursive(parent_tree)
-                current_node = TreeNode(current.data.node, parent=p)
+                current_node = TreeNode(current_rule, parent=p)
                 p.right = current_node
                 current_node.is_right_child = True
             else: # insert to the right
-                current_node = TreeNode(current.data.node, parent=parent_tree)
+                current_node = TreeNode(current_rule, parent=parent_tree)
                 parent_tree.right = current_node
                 current_node.is_right_child = True
 
-        #print('root')
-        #print(current_node.get_root_and_correct_parents())
-        #print('current tree')
-        #print(current_node)
-        current.cache[1] = current_node
+        print('root')
+        print(current_node.get_root_and_correct_parents())
+        print('current tree')
+        print(current_node)
+        current.cache = current_node
+        print('')
 
         #_ = input("")
 
         ## NOW, DO HEURISTIC
-        return self.heuristic_cost_estimate(ops_path, goal)
+        return self.heuristic_cost_estimate(current.data.ops_path, goal)
 
     def heuristic_cost_estimate(self, curr, goal):
         '''
@@ -649,17 +657,20 @@ class GraphFinder(AStar):
         return h
 
     def distance_between(self, n1, n2):
-        return 0.1 + 0.9 * n2.node.word_cost
+        return 0.1 + 0.9 * n2.gn.node.word_cost
 
     def neighbors(self, node):
-        n = node.get_neighbors()
-        return node.get_neighbors()
+        neighbors = node.gn.get_neighbors()
+        for n in neighbors:
+            g = GraphSearchNode(n, node.ops_path.copy())
+            g.add_ops(n.ops)
+            yield g
 
     def path_is_goal_reached(self, current, goal):
-        current.data.get_neighbors()
-        is_reached = current.cache[0] == goal and current.data.is_terminal
+        current.data.gn.get_neighbors()
+        is_reached = current.data.ops_path == goal and current.data.gn.is_terminal
         if is_reached:
-            print(current.cache[1].get_root())
+            print(current.cache.get_root())
         return is_reached
 
 import re
@@ -680,7 +691,7 @@ def find_bf(bf):
             paths.append('.')
         else:
             #print('goal:', s)
-            path = GraphFinder().astar(root, s)
+            path = GraphFinder().astar(GraphSearchNode(root, []), s)
             paths.append(path)
     return paths
 
@@ -709,7 +720,7 @@ def main():
     #paths = find_bf('.+[.+]')
     for p in paths:
         for n in p:
-            print(repr(n), end=' ')
+            print(repr(n.gn), end=' ')
     print('')
 
 

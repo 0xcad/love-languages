@@ -201,6 +201,9 @@ class AStar(ABC, Generic[T]):
                     neighbor, goal
                 )
 
+                '''
+                TODO: this will never be true for me, huh...
+                '''
                 if neighbor.in_openset:
                     if neighbor.fscore < fscore:
                         # the new path to this node isn't better

@@ -382,16 +382,30 @@ class TreeNode:
         return c
 
     @classmethod
+    def _copy_node(cls, node):
+        '''
+        Helper function to copy just the individual data of a single node
+        Includes the parent
+        '''
+        new = TreeNode(node.data)
+        new.is_left_child = node.is_left_child
+        new.is_right_child = node.is_right_child
+        new.is_third_child = node.is_third_child
+        new.parent = node.parent
+        return new
+
+    @classmethod
     def copy_subtree(cls, tree):
+        '''
+        the parent of the resulting tree is the uncopied parent of the original
+        '''
         if not tree:
             return tree
+        # copy children
         left = cls.copy_subtree(tree.left)
         right = cls.copy_subtree(tree.right)
         third = cls.copy_subtree(tree.third)
-        new = TreeNode(tree.data)
-        new.is_left_child = tree.is_left_child
-        new.is_right_child = tree.is_right_child
-        new.is_third_child = tree.is_third_child
+        new = cls._copy_node(tree) # copy node
         if left:
             left.parent = new
         if right:
@@ -400,16 +414,40 @@ class TreeNode:
             third.parent = new
         new.left = left
         new.right = right
-        new.third = third
-        new.parent = tree.parent
+        new.third = third # assign copied children to node
         return new
 
     @classmethod
     def copy_tree(cls, tree):
+        '''
+        Copy the subtree *and* copy up to the root, as well. Return a pointer just to the copy of `tree` though
+        '''
         new = cls.copy_subtree(tree)
-        print('hey!', id(new), id(tree))
-        print('hey!', id(new.parent), id(tree.parent))
-        # TODO: copy the parent...
+
+        curr = new
+        parent = new.parent
+        while parent:
+            # if new is the right subtree, copy the left subtree
+            # if new is the left subtree, copy the right subtree
+            new_parent = cls._copy_node(parent)
+
+            # copy whatever we didn't copy before
+            if not curr.is_right_child:
+                new_sibling = cls.copy_subtree(parent.right)
+                new_parent.right = new_sibling
+                if new_sibling: new_sibling.parent = new_parent
+            if not curr.is_left_child:
+                new_sibling = cls.copy_subtree(parent.left)
+                new_parent.left = new_sibling
+                if new_sibling: new_sibling.parent = new_parent
+            if not curr.is_third_child:
+                new_sibling = cls.copy_subtree(parent.third)
+                new_parent.third = new_sibling
+                if new_sibling: new_sibling.parent = new_parent
+
+            curr.parent = new_parent
+            curr = new_parent
+            parent = new_parent.parent
         return new
 
     @classmethod
@@ -429,7 +467,9 @@ class TreeNode:
             raise Exception('invalid insertion, left rule not in tree...')
 
         if copy:
-            curr = cls.copy_subtree(curr)
+            #curr = cls.copy_subtree(curr)
+            # ^ this would've been elegant but it doesn't work
+            curr = cls.copy_tree(curr)
         # we make a copy so we don't fuck with the tree if we need to backtrack
 
         # insert the node at curr
@@ -475,8 +515,8 @@ class GraphFinder(AStar):
         '''
         current_node = parent_tree
 
-        print('current', id(current))
-        print('came_from', id(came_from))
+        #print('current', id(current))
+        #print('came_from', id(came_from))
 
         if current.data.ops:
             ops = [c for c in current.data.ops]
@@ -493,19 +533,17 @@ class GraphFinder(AStar):
         #if current.data.is_exit:
         #    print('this is an exit node!')
 
-        print("Path (reverse order):")
+        #print("Path (reverse order):")
         c = came_from
         i = 0
-        print(repr(current.data.node), end=' || ')
+        #print(repr(current.data.node), end=' || ')
         while c and i < 10:
-            print(repr(c.data), end=" || ")
+            #print(repr(c.data), end=" || ")
             c = c.came_from
             i += 1
-        print('')
+        #print('')
 
         #print(current.data.commitments)
-        print('is choice', current.data.is_choice)
-        print('force recurse right', current.data.force_recurse_right)
         '''
         if the node is an exit node:
             * convert the node and what came before it into a tree
@@ -517,16 +555,13 @@ class GraphFinder(AStar):
                 if not current.data.node.is_left_recursive:
                     pass
                 else: # climb up tree to where I can insert the copied node
-                    print('inserting left recursive node')
                     #parent_tree = TreeNode.copy_tree(parent_tree)
                     current_node = TreeNode.insert_left_recursive_node(parent_tree, TreeNode(current.data.node))
             elif came_from.data.is_choice: # insert to the left
-                print('inserting to left of parent', came_from.data.node)
                 current_node = TreeNode(current.data.node, parent=parent_tree)
                 parent_tree.left = current_node
                 current_node.is_left_child = True
             elif came_from.data.force_recurse_right: # insert to the right of prev area...
-                print('forcing recurse right')
                 p = parent_tree
                 #while p and p.right is not None:
                 while p and not p.left: # go up to next node that has a left child...
@@ -535,19 +570,18 @@ class GraphFinder(AStar):
                 p.right = current_node
                 current_node.is_right_child = True
             else: # insert to the right
-                print('inserting to right of parent', came_from.data.node)
                 current_node = TreeNode(current.data.node, parent=parent_tree)
                 parent_tree.right = current_node
                 current_node.is_right_child = True
         #print(tree.get_root())
 
-        print('root')
-        print(current_node.get_root_and_correct_parents())
-        print('current tree')
-        print(current_node)
+        #print('root')
+        #print(current_node.get_root_and_correct_parents())
+        #print('current tree')
+        #print(current_node)
         current.cache[1] = current_node
 
-        _ = input("")
+        #_ = input("")
 
         ## NOW, DO HEURISTIC
         return self.heuristic_cost_estimate(ops_path, goal)
@@ -622,12 +656,13 @@ def find_bf(bf):
 
 def main():
 
-    paths = find_bf('>>++++')
+    paths = find_bf('>>')
     #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
     #paths = find_bf('.+[.+]')
-    for p in paths:
-        for n in p:
-            print(repr(n), end=' ')
+    print(paths)
+    #for p in paths:
+        #for n in p:
+        #    print(repr(n), end=' ')
 
 
     curr = root

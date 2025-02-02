@@ -151,4 +151,21 @@ ugh, left recursive rules are awful. we need to go back up the tree, and insert 
     * so still, if we go to like, the right VP, then backtrack so we're back on the other side of the tree again, our tree is incorrect
 
 TODO:
-* looks like hashing introduced a bug where it would stop searching visited nodes -- even if they're being seen in new contexts...
+
+DONE:
+* reorganized more code
+* fixed earlier hashing function
+* made good progress on constructing trees as we go in our graph (that's what cache is for now)
+* fixed a hashing bug by wrapping graph nodes in another class
+
+# 2025-02-02
+TODO:
+* memoization at nodes still, we're on that beat.
+* now add in memoized nodes to neighbors
+    * update GraphSearchNodes to take them
+    * update neighbors function -- either start recursing right, start a new sentence, recurse right elsewhere, break those cases up
+    * update the heuristic function to use `path_ops` if a node has a tree
+
+DONE:
+* fixed a bug with DTV DP DP, simplified cases in GraphNode neighbors...
+* started memoizing trees

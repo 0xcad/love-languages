@@ -1,6 +1,6 @@
 from common import combine_bf
 from rules import RuleNode
-from trees import TreeNode, TreeMemo
+from trees import TreeNode, MemoTree
 from astar import AStar
 from math import inf
 import copy
@@ -171,8 +171,9 @@ class GraphSearchNode:
     A wrapper for graph nodes and ops_path
     Does not hash, or no equality...
     '''
-    def __init__(self, gn, ops_path):
+    def __init__(self, ops_path, gn=None, tree=None):
         self.gn = gn
+        self.tree = tree
         self.ops_path = ops_path
 
     def add_ops(self, ops):
@@ -183,8 +184,69 @@ class GraphSearchNode:
             self.ops_path = combine_bf(self.ops_path, ops)
         return self.ops_path
 
+    def get_neighbors(self, memo=None):
+        def graph_node_neighbors(gn):
+            neighbors = gn.get_neighbors()
+            for n in neighbors:
+                g = GraphSearchNode(self.ops_path.copy(), n)
+                g.add_ops(n.ops)
+                yield g
+
+        if self.gn and not self.tree:
+            yield from graph_node_neighbors(self.gn)
+
+            if memo:
+                target_rule = self.gn.target_rule
+                for t in memo.table.get(target_rule, []):
+                    t = TreeNode.copy_tree(t)
+                    g = GraphSearchNode(self.ops_path.copy(), self.gn, tree=t)
+                    g.add_ops(t.ops_path)
+                    yield g
+        elif self.tree:
+            '''
+            Recreate the exit graph node and return the neighbors of that
+            if the tree is a left child:
+                * the parent gn is a choice node
+                * it has a spawning node, the self.gn that spawned it, commitments go under that
+            if the tree is a right child:
+                * commitments just get extended onto to self.gn commitments[-1]
+            '''
+            # the tree is a left child
+            #if self.gn.is_choice:
+            print('this ones a tree, came from ', self.gn)
+            print(self.tree)
+
+            commitments = self.gn.copy_commitments()
+            if self.gn.is_choice:
+                new_seen = [self.gn.node, self.tree.data]
+                commitments.append(new_seen)
+            else:
+                commitments[-1].append(self.tree.data)
+
+            curr = self.tree
+            new_seen = []
+            # get to the right exit node, while recreating commitments
+            while curr and (curr.right or curr.left or curr.third):
+                if curr.right or curr.third:
+                    new_seen.append(curr.data)
+                    #commitments[-1].append(curr.data)
+                    curr = curr.third if curr.third else curr.right
+                elif curr.left:
+                    commitments[-1].extend(new_seen)
+                    commitments.append([curr]) # new spawning node
+                    new_seen = []
+                    curr = curr.left
+            commitments[-1].extend(new_seen)
+            print(commitments, curr)
+
+            exit_node = GraphNode(commitments, curr.data)
+            yield from graph_node_neighbors(exit_node)
+
 
 root = GraphNode([[RuleNode.root]], RuleNode.root, is_choice = True)
+
+M = MemoTree()
+M.load_from_file()
 
 class GraphFinder(AStar):
 
@@ -200,6 +262,11 @@ class GraphFinder(AStar):
         print('')
 
     def path_heuristic_cost_estimate(self, current, goal):
+        tree = current.data.tree
+        if tree:
+            # TODO: insert the tree into current.cache
+            return self.heuristic_cost_estimate(current.data.ops_path, goal)
+
         gn = current.data.gn
         current_rule = gn.node
 
@@ -251,7 +318,7 @@ class GraphFinder(AStar):
         TODO: make this more memory efficient by only creating trees in this case
         '''
         if gn.is_exit:
-            TreeNode.memoize_tree(memo_trees, current_node)
+            TreeNode.memoize_tree(M.table, current_node)
             '''self._print_path(current)
             #print("this is an exit node")
             print('root')
@@ -303,18 +370,28 @@ class GraphFinder(AStar):
         return h
 
     def distance_between(self, n1, n2):
-        return 0.1 + 0.9 * n2.gn.node.word_cost
+        if n2.tree:
+            return n2.tree.get_cost()
+        elif n2.gn:
+            return 0.1 + 0.9 * n2.gn.node.word_cost
 
-    def neighbors(self, node):
-        neighbors = node.gn.get_neighbors()
-        for n in neighbors:
-            g = GraphSearchNode(n, node.ops_path.copy())
-            g.add_ops(n.ops)
-            yield g
+    def path_neighbors(self, search_node):
+        node = search_node.data
+        for n in node.get_neighbors(M):
+            yield n
+
+        if node.gn and not search_node.data.tree:
+            print(node.gn.target_rule)
+            print(node.gn.commitments)
+        _ = input('')
 
     def path_is_goal_reached(self, current, goal):
-        current.data.gn.get_neighbors()
-        is_reached = current.data.ops_path == goal and current.data.gn.is_terminal
+        gn = current.data.gn
+        is_reached = False
+        # TODO: when is path reached on a tree?
+        if gn and not current.data.tree:
+            gn.get_neighbors()
+            is_reached = current.data.ops_path == goal and current.data.gn.is_terminal
         if is_reached:
             print(current.cache.get_root())
         return is_reached
@@ -337,7 +414,7 @@ def find_bf(bf):
             paths.append('.')
         else:
             #print('goal:', s)
-            path = GraphFinder().astar(GraphSearchNode(root, []), s)
+            path = GraphFinder().astar(GraphSearchNode([], root), s)
             paths.append(path)
     return paths
 

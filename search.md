@@ -169,3 +169,25 @@ TODO:
 DONE:
 * fixed a bug with DTV DP DP, simplified cases in GraphNode neighbors...
 * started memoizing trees
+* wrote code to memoize all possible trees of fixed height
+* reorganized code
+
+
+# 2025-02-07
+what are the neighbors when a memoized tree is inserted?
+* if the tree fills in the right child, we need to essentially just recreate the rightmost graph node. we go right, each time storing what we make in our commitments list. we merge/append this new commitments list with the commitment list of whatever we came from
+* this implies that tree search nodes need to know the gn that spawned them
+* if the tree fills in the left child, we want to insert a FRR graph node of the choice node that spawned it. copy graph node, pop most commitments, FRR
+
+* ^oh, sike, these are just the same case. we still want to recreate the exit node, my other code will handle it for us from there
+
+DONE:
+* started adjusting graph search nodes for trees
+* modified commitments to get tree neighbors
+
+IN PROGRESS:
+* add trees to graph search node trees...
+* finish modifying graphsearchnode with trees...
+
+TODO:
+* modify commitments to treat the spawning node differently, it should really be in like, it's own spot or smtg. but yes, arguably I don't want to have triple nested arrays...

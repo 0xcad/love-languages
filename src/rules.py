@@ -150,6 +150,9 @@ class RuleNode:
         self.rule = rule
         #print(rule, ':', self.l, self.r, self.third, '\t', self.l_leaf, self.r_leaf)
 
+    def get_cost(self):
+        return self.word_cost
+
     def __str__(self):
         return f"{self.rule}: " + ' '.join([x for x in [self.l, self.r, self.third] if x])
 

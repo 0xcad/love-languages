@@ -28,6 +28,7 @@ class TreeNode:
 
         self._is_complete = None
         self._ops_path = None
+        self._cost = None
 
     @property
     def is_complete(self):
@@ -85,12 +86,7 @@ class TreeNode:
             return self
         c = self
         while c and c.parent is not None:
-            if c.is_left_child:
-                c.parent.left = c
-            elif c.is_right_child:
-                c.parent.right = c
-            elif c.is_third_child:
-                c.parent.third = c
+            TreeNode._set_parent_ptrs(c)
             c = c.parent
         return c
 
@@ -216,15 +212,23 @@ class TreeNode:
         curr.parent = node # change the parents
         node.is_left_child = curr.is_left_child
         node.is_right_child = curr.is_right_child
-        if node.is_left_child:
-            node.parent.left = node
-        elif node.is_right_child:
-            node.parent.right = node # left/right child status
+        TreeNode._set_parent_ptrs(node) # left/right child status
 
         curr.is_left_child = True
         curr.is_right_child = None
         node.left = curr # insert curr as left child of node
         return node
+
+    @classmethod
+    def _set_parent_ptrs(cls, node):
+        # ensure a node's parent pointers are correct
+        if node.is_left_child:
+            node.parent.left = node
+        elif node.is_right_child:
+            node.parent.right = node
+        elif node.is_third_child:
+            node.parent.third = node
+
 
     @classmethod
     def find_right_recursive(cls, tree):
@@ -236,13 +240,9 @@ class TreeNode:
 
         c = tree
         while c and c.parent is not None:
+            TreeNode._set_parent_ptrs(c)
             if c.is_left_child:
-                c.parent.left = c
                 return c.parent
-            elif c.is_right_child:
-                c.parent.right = c
-            elif c.is_third_child:
-                c.parent.third = c
             c = c.parent
         raise Exception("find right recursive failed")
 
@@ -258,18 +258,13 @@ class TreeNode:
                 key = c.data.rule
                 c.ops_path
                 memo[key] = memo.get(key, set()).union(set([c]))
-            if c.is_left_child:
-                c.parent.left = c
-            elif c.is_right_child:
-                c.parent.right = c
-            elif c.is_third_child:
-                c.parent.third = c
+            TreeNode._set_parent_ptrs(c)
             c = c.parent
 
         return memo
 
     @property
-    def ops_path(self):
+    def ops_path(self) -> list:
         '''
         Returns an array for the ops of the tree
         '''
@@ -287,6 +282,28 @@ class TreeNode:
             return combine_bf(left, node.data.ops, right, third)
         self._ops_path = helper(self)
         return self._ops_path
+
+    def get_data(self):
+        '''
+        in order generator for node data in list
+        '''
+        def helper(node):
+            if not node:
+                return None
+            yield from helper(node.left)
+            yield node.data
+            yield from helper(node.right)
+            yield from helper(node.third)
+        return helper(self)
+
+    def get_cost(self):
+        '''
+        Returns the word cost of all trees
+        '''
+        if self._cost is not None:
+            return self._cost
+        self._cost = sum(map(lambda data: data.get_cost(), self.get_data()))
+        return self._cost
 
     def __eq__(self, other):
         def children_equal(t1, t2):

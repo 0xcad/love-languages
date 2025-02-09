@@ -191,3 +191,33 @@ IN PROGRESS:
 
 TODO:
 * modify commitments to treat the spawning node differently, it should really be in like, it's own spot or smtg. but yes, arguably I don't want to have triple nested arrays...
+
+# 2025-02-08
+bug: I think the tree, that we have to point forwards to in `current.cache` (whenever we insert a tree) has to be its rightmost node
+* in the process of fixing
+
+another bug:
+* somehow the `correct_parents` thing is *not* working
+* one node is being set to be both the left and right child of its parent. worse, this is happening for every node in the tree. specifically, the right child is becoming both the left and the right child....
+* which is because both is left child and is right child is set, which is so wrong
+
+* ...and the bug is happening because in our tree memo process, some trees are set to be both left and right children
+
+another bug:
+* if we came from an exit node, the next tree that we insert could be a child of a FRR node -- i.e, we go back up the tree
+* in this case, if we insert a FRR node we need to set the the current pointer to be where the tree is? this also solves our `insert_left_recursive` or whatever problem i think....
+
+another bug:
+* looks like on some rules with third children, they get set both as left children and third children. similar error to what I had before with right children but I know that part was fixed during tree memo...
+* this happens with rule `DP: DP Conj DP`, a rule that itself has a third child...
+* when `insert_right` sets it to be a third child -- I see that it's already a *left* child, which is problematic
+
+another bug:
+* somehow `is_complete` wasn't getting casted to a bool
+
+DONE:
+* created a checker for the correctness of trees
+* fixed a bug with tree memo process creating incorrect trees
+* fixed a bug with inserting trees after FRR nodes
+* fixed a bug when memoizing new trees that shouldn't have had child attributes
+* fixed a bug where `is_complete` wasn't getting casted to a bool

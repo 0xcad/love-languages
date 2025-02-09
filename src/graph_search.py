@@ -213,8 +213,6 @@ class GraphSearchNode:
             '''
             # the tree is a left child
             #if self.gn.is_choice:
-            print('this ones a tree, came from ', self.gn)
-            print(self.tree)
 
             commitments = self.gn.copy_commitments()
             if self.gn.is_choice:
@@ -237,7 +235,6 @@ class GraphSearchNode:
                     new_seen = []
                     curr = curr.left
             commitments[-1].extend(new_seen)
-            print(commitments, curr)
 
             exit_node = GraphNode(commitments, curr.data)
             yield from graph_node_neighbors(exit_node)
@@ -262,15 +259,27 @@ class GraphFinder(AStar):
         print('')
 
     def path_heuristic_cost_estimate(self, current, goal):
+        came_from = current.came_from
+
         tree = current.data.tree
         if tree:
-            # TODO: insert the tree into current.cache
+            # if a tree is an option it must be either the left
+            # or right subtree of the node that we previously came from
+            parent_tree = TreeNode.copy_tree(came_from.cache)
+
+            if came_from.data.gn.is_choice: # left subtree
+                TreeNode.insert_left(parent_tree, tree)
+            else: # right subtree
+                TreeNode.insert_right(parent_tree, tree)
+
+            current.cache = parent_tree.get_rightmost_node()
+
+            current.cache.get_root_and_correct_parents().assert_correct() #TODO
             return self.heuristic_cost_estimate(current.data.ops_path, goal)
 
         gn = current.data.gn
         current_rule = gn.node
 
-        came_from = current.came_from
         if came_from is None or (gn.is_choice and current_rule == RuleNode.root):
             current.cache = None
         else:
@@ -287,7 +296,12 @@ class GraphFinder(AStar):
         elif came_from:
             if gn.force_recurse_right:
                 if not current_rule.is_left_recursive:
-                    current_node = parent_tree
+                    # climb up the current tree to get the FRR node
+                    curr = parent_tree
+                    while not (curr and curr.data == gn.node and curr.left):
+                        TreeNode._set_parent_ptrs(curr)
+                        curr = curr.parent
+                    current_node = curr
                 else: # climb up tree to where I can insert the copied node
                     current_node = TreeNode.insert_left_recursive_node(parent_tree, current_node)
             elif came_from.data.gn.is_choice: # insert to the left
@@ -319,6 +333,7 @@ class GraphFinder(AStar):
         '''
         if gn.is_exit:
             TreeNode.memoize_tree(M.table, current_node)
+            #print(current_node.is_left_child, current_node.is_right_child, current_node.is_third_child)
             '''self._print_path(current)
             #print("this is an exit node")
             print('root')
@@ -380,20 +395,17 @@ class GraphFinder(AStar):
         for n in node.get_neighbors(M):
             yield n
 
-        if node.gn and not search_node.data.tree:
-            print(node.gn.target_rule)
-            print(node.gn.commitments)
-        _ = input('')
-
     def path_is_goal_reached(self, current, goal):
         gn = current.data.gn
-        is_reached = False
-        # TODO: when is path reached on a tree?
-        if gn and not current.data.tree:
-            gn.get_neighbors()
-            is_reached = current.data.ops_path == goal and current.data.gn.is_terminal
+        is_reached = current.data.ops_path == goal
         if is_reached:
-            print(current.cache.get_root())
+            if gn and not current.data.tree:
+                gn.get_neighbors()
+                is_reached &= current.data.gn.is_terminal
+            elif current.data.tree:
+                is_reached &= current.cache.get_root().is_complete
+            if is_reached:
+                print(current.cache.get_root())
         return is_reached
 
 import re

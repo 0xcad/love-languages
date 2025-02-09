@@ -34,7 +34,7 @@ class TreeNode:
     def is_complete(self):
         if self._is_complete is not None:
             return self._is_complete
-        self._is_complete = (
+        self._is_complete = bool(
                 (self.left is False or self.left and self.left.is_complete) and
                 (self.right is False or self.right and self.right.is_complete) and
                 (self.third is False or self.third and self.third.is_complete)
@@ -62,6 +62,7 @@ class TreeNode:
             elif node is False:
                 return "leaf"
             s = [f'{repr(node.data)} {str(id(node))[-5:]} -> parent {repr(node.parent.data) if node.parent else "root"} {str(id(node.parent))[-5:]} ({"" if node.is_complete else "in"}complete)']
+            s[0] += f' {node.is_left_child} {node.is_right_child} {node.is_third_child}'
             bullet = '*' if depth % 2 else '>'
             s.append(f'{" " * depth * 2}{bullet} {helper(node.left, depth +1)}')
             s.append(f'{" " * depth * 2}{bullet} {helper(node.right, depth +1)}')
@@ -72,6 +73,38 @@ class TreeNode:
 
     def __repr__(self):
         return f"{'' if self.is_complete else 'in' }complete {self.data} tree"
+
+
+    def assert_correct(self):
+        '''
+        Makes sure that the tree is correct
+        '''
+        get_rule = lambda node: node if not node else node.data.rule
+        def helper(node):
+            if not node:
+                return True
+
+            assert(bool(node.is_left_child) + bool(node.is_right_child) + bool(node.is_third_child) <= 1)
+            if node.is_left_child:
+                assert(node.parent and node.parent.left == node)
+            if node.is_right_child:
+                assert(node.parent and node.parent.right == node)
+            if node.is_third_child:
+                assert(node.parent and node.parent.third == node)
+            assert((not node.left or get_rule(node.left) == node.data.l) and (not node.right or get_rule(node.right) == node.data.r))
+            assert(not node.third or get_rule(node.third) == node.data.third)
+            helper(node.left)
+            helper(node.right)
+            helper(node.third)
+
+        #print('hey')
+        #print(self.get_root_and_correct_parents())
+        try:
+            helper(self.get_root_and_correct_parents())
+        except Exception as e:
+            print('ERROR')
+            print(self.get_root_and_correct_parents())
+            raise Exception(e)
 
     def get_root(self):
         if not self.parent:
@@ -97,6 +130,7 @@ class TreeNode:
             # insert into third if right is a leaf...
             parent.third = node
             node.is_third_child = True
+
         elif parent.right is False and parent.third is False:
             raise Exception('inserting right subtree into leaf')
         else:
@@ -185,6 +219,15 @@ class TreeNode:
             parent = new_parent.parent
         return new
 
+    def get_rightmost_node(self):
+        curr = self
+        while curr.left or curr.right or curr.third:
+            if curr.right or curr.third:
+                curr = curr.third if curr.third else curr.right
+            else:
+                curr = curr.left
+        return curr
+
     @classmethod
     def insert_left_recursive_node(cls, tree, node, copy=True):
         '''
@@ -199,6 +242,9 @@ class TreeNode:
         while curr and curr.data.rule != target_rule:
             curr = curr.parent
         if curr is None:
+            print('looking for', target_rule)
+            print('inserting rule', node.data)
+            print(tree.get_root_and_correct_parents())
             raise Exception('invalid insertion, left rule not in tree...')
 
         if copy:
@@ -256,8 +302,15 @@ class TreeNode:
         while c and c.is_complete:
             if type(c.data) == RuleNode:
                 key = c.data.rule
-                c.ops_path
-                memo[key] = memo.get(key, set()).union(set([c]))
+                h = c.__hash__()
+                if h not in memo.get(key, set()):
+                    c.ops_path # compute the ops path before memoization
+
+                    copy = TreeNode(c.data) # the tree should have no parents
+                    copy.left = c.left
+                    copy.right = c.right
+                    copy.third = c.third
+                    memo[key] = memo.get(key, set()).union(set([copy]))
             TreeNode._set_parent_ptrs(c)
             c = c.parent
 
@@ -310,7 +363,8 @@ class TreeNode:
             return ((t1 is None and t2 is None) or
                     (t1 is False and t2 is False) or
                     t1 and t2 and t1.__eq__(t2))
-        return (self.data == other.data and
+        return (type(self) == type(other) and
+                self.data == other.data and
                 children_equal(self.left, other.left) and
                 children_equal(self.right, other.right) and
                 children_equal(self.third, other.third))
@@ -384,24 +438,26 @@ class TreeNode:
         The tree is complete
         Add a parent to it, and then recurse on that
         '''
+        assert(not node.parent)
+        assert(not node.is_left_child and not node.is_right_child and not node.is_third_child)
         yield node
 
         for l_parent in RuleNode.nodes_by_left.get(rule.rule, set()):
-            node = TreeNode.copy_subtree(node)
+            lnode = TreeNode.copy_subtree(node)
             parent = TreeNode(l_parent)
-            TreeNode.insert_left(parent, node)
+            TreeNode.insert_left(parent, lnode)
             yield from TreeNode.construct_from_tree(parent, max_height - 1)
 
         for r_parent in RuleNode.nodes_by_right.get(rule.rule, set()):
-            node = TreeNode.copy_subtree(node)
+            rnode = TreeNode.copy_subtree(node)
             parent = TreeNode(r_parent)
-            TreeNode.insert_right(parent, node)
+            TreeNode.insert_right(parent, rnode)
             yield from TreeNode.construct_from_tree(parent, max_height - 1)
 
         for t_parent in RuleNode.nodes_by_third.get(rule.rule, set()):
-            node = TreeNode.copy_subtree(node)
+            tnode = TreeNode.copy_subtree(node)
             parent = TreeNode(t_parent)
-            TreeNode.insert_right(parent, node)
+            TreeNode.insert_right(parent, tnode)
             yield from TreeNode.construct_from_tree(parent, max_height - 1)
 
 
@@ -441,6 +497,7 @@ class MemoTree:
                 rule_tree = TreeNode(rule)
                 for tree in TreeNode.construct_from_tree(rule_tree, max_height):
                     if tree:
+                        tree.assert_correct()
                         TreeNode.memoize_tree(self.table, tree)
         return self.table
 
@@ -450,6 +507,7 @@ if __name__ == '__main__':
     count = 0
     for key, trees in M.table.items():
         for tree in trees:
+            tree.assert_correct()
             print(tree)
             print(tree.ops_path)
             print('')

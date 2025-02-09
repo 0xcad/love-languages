@@ -61,7 +61,7 @@ rules = [
     #{'rule': "P': P", 'ops': ""}
 ]
 
-is_leaf = lambda X: X is None or not (X.endswith("'") or (len(X) > 1 and X.endswith("P")))
+is_leaf = lambda X: not X or not (X.endswith("'") or (len(X) > 1 and X.endswith("P")))
 class RuleNode:
     '''
     A class wrapper for rule dictionaries

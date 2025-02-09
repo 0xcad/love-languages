@@ -123,6 +123,7 @@ class GraphNode:
                         commitments = [[None]]
                     g = GraphNode(commitments, n, force_recurse_right=True)
                     self._add_neighbor(neighbors, g)
+                    continue
 
                 # get all left recursive rules in scope
                 n_rules = self._tree.nodes[n.rule]
@@ -147,6 +148,8 @@ class GraphNode:
     def __repr__(self):
         if self.is_choice:
             return 'choice node: ' + repr(self.node)
+        if self.force_recurse_right:
+            return 'FRR: ' + repr(self.node)
         return repr(self.node)
 
     def __eq__(self, other):
@@ -215,24 +218,17 @@ class GraphSearchNode:
             #if self.gn.is_choice:
 
             commitments = self.gn.copy_commitments()
-            if self.gn.is_choice:
-                new_seen = [self.gn.node, self.tree.data]
-                commitments.append(new_seen)
-            else:
-                commitments[-1].append(self.tree.data)
-
-            curr = self.tree
             new_seen = []
+            curr = self.tree
             # get to the right exit node, while recreating commitments
             while curr and (curr.right or curr.left or curr.third):
                 if curr.right or curr.third:
                     new_seen.append(curr.data)
-                    #commitments[-1].append(curr.data)
                     curr = curr.third if curr.third else curr.right
                 elif curr.left:
                     commitments[-1].extend(new_seen)
-                    commitments.append([curr]) # new spawning node
                     new_seen = []
+                    commitments.append([curr]) # new spawning node
                     curr = curr.left
             commitments[-1].extend(new_seen)
 
@@ -254,7 +250,10 @@ class GraphFinder(AStar):
         c = current.came_from
         print(repr(gn), end=' || ')
         while c:
-            print(repr(c.data.gn), end=" || ")
+            if c.data.tree:
+                print(repr(c.data.tree), end=" || ")
+            else:
+                print(repr(c.data.gn), end=" || ")
             c = c.came_from
         print('')
 
@@ -274,7 +273,7 @@ class GraphFinder(AStar):
 
             current.cache = parent_tree.get_rightmost_node()
 
-            current.cache.get_root_and_correct_parents().assert_correct() #TODO
+            #current.cache.get_root_and_correct_parents().assert_correct() #TODO
             return self.heuristic_cost_estimate(current.data.ops_path, goal)
 
         gn = current.data.gn
@@ -297,10 +296,12 @@ class GraphFinder(AStar):
             if gn.force_recurse_right:
                 if not current_rule.is_left_recursive:
                     # climb up the current tree to get the FRR node
+                    # but don't insert anything
                     curr = parent_tree
-                    while not (curr and curr.data == gn.node and curr.left):
+                    while curr and not (curr and curr.data == gn.node and curr.left):
                         TreeNode._set_parent_ptrs(curr)
                         curr = curr.parent
+
                     current_node = curr
                 else: # climb up tree to where I can insert the copied node
                     current_node = TreeNode.insert_left_recursive_node(parent_tree, current_node)
@@ -314,12 +315,6 @@ class GraphFinder(AStar):
         else:
             current_node = parent_tree
 
-        '''
-        print('root')
-        print(current_node.get_root_and_correct_parents())
-        print('current tree')
-        print(current_node)
-        '''
         current.cache = current_node
 
         '''
@@ -333,17 +328,6 @@ class GraphFinder(AStar):
         '''
         if gn.is_exit:
             TreeNode.memoize_tree(M.table, current_node)
-            #print(current_node.is_left_child, current_node.is_right_child, current_node.is_third_child)
-            '''self._print_path(current)
-            #print("this is an exit node")
-            print('root')
-            print(current_node.get_root_and_correct_parents())
-            print('current tree')
-            print(current_node)
-            print('memo')
-            print(memo_trees)
-            _ = input("")'''
-
         #_ = input("")
 
         ## NOW, DO HEURISTIC
@@ -393,6 +377,7 @@ class GraphFinder(AStar):
     def path_neighbors(self, search_node):
         node = search_node.data
         for n in node.get_neighbors(M):
+        #for n in node.get_neighbors():
             yield n
 
     def path_is_goal_reached(self, current, goal):
@@ -451,7 +436,10 @@ def choice_search():
 def main():
     #choice_search()
 
-    paths = find_bf('++++++')
+    import time
+    stime = time.time()
+    paths = find_bf('>+>')
+    print(time.time()-stime)
     #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
     #paths = find_bf('.+[.+]')
     for p in paths:

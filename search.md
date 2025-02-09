@@ -215,9 +215,73 @@ another bug:
 another bug:
 * somehow `is_complete` wasn't getting casted to a bool
 
+what the fuck, it's significantly slower with memoization `T_T`
+* by like, a significant margin, 0.037s without to 0.6s with
+    * that's for the string `++++++`
+
+another bug:
+* finding FRR node is sometimes None?
+* this is happening with `A': AdvP A'`
+* this is the offending tree, as you can see the `A': A 26096` got inserted as a sibling of `A': AdvP A'`, not as its left child
+* we're looking for a `A': AdvP A'` from `26096`
+```
+* `AP: A'` 26624 -> parent `N': AP N'` 26800 (incomplete) True None None
+> leaf
+> `A': A' Conj A'` 26272 -> parent `AP: A'` 26624 (incomplete) None True None
+  * `A': AdvP A'` 26448 -> parent `A': A' Conj A'` 26272 (incomplete) True None None
+    > incomplete
+    > incomplete
+  * leaf
+  * `A': A` 26096 -> parent `A': A' Conj A'` 26272 (complete) None None True
+    > leaf
+    > leaf
+```
+and this is part of the path
+```
+Path (reverse order):
+`A': AdvP A'` || `A': A` || `A': A' Conj A'` || choice node: `A': AdvP A'` || choice node: `A': AdvP A'` || `AP: A'`
+```
+that's really fucked up, that shouldn't ever be an option
+wait i modified the path print function we got this instead now
+```
+Path (reverse order):
+`A': AdvP A'` || `A': A` || `A': A' Conj A'` || complete AdvP: Adv' tree || choice node: `A': AdvP A'` || `AP: A'`
+```
+* hey where even is that `AdvP` tree? I don't see it
+* tracing the path:
+    * we successfully insert that AdvP, everything looks great, but then we insert the `A': A' Conj A'` (an option we can legally get to from the exit node of the `AdvP` tree)
+    * this is where the error happens though, we insert the `A': A' Conj A'` rule and now we *lose* the left child of the `A': AdvP A'`. I bet the parent pointer is still set, just the left pointer got unset
+* ok, I fixed the problem where we lost the left child, lowkey our tree still looks correct but we're getting an error
+    * one problem though is OHHHH
+* problem: it's a problem with the commitments of the rightmost child
+    * we *shouldn't* have the option to go to a `A' Conj` rule, we should be going to a FRR `A': AdvP A'` instead. there must be a problem with the spawning node then
+
+bug with commitments:
+* the spawning node is already in the commitments, no need to put that back in there
+
+^turns out it was a bug in commitments, and in the `get_neighbors` function of graph nodes
+
+parent_tree/tree is the Adv' node
+* node is the A' A' conj A' node
+* target rule is A'
+
+still significantly slower with memoization `T_T`
+* 0.1057s without to 1.257s with for `+++++`
+* 23.405s without to idk really long, too long for `>+>+++>`
+
+spending a lot of time on copying trees, maintaining that list, etc with memoization...
+* str commitments
+* copying trees fs
+
+observation:
+* in `>+>` with memoization, in our final path we never actually used a memoized tree
+* neither in `+++`
+* if we make it cheaper to use trees, we just take longer and still don't use them
+
 DONE:
 * created a checker for the correctness of trees
 * fixed a bug with tree memo process creating incorrect trees
 * fixed a bug with inserting trees after FRR nodes
 * fixed a bug when memoizing new trees that shouldn't have had child attributes
 * fixed a bug where `is_complete` wasn't getting casted to a bool
+* fixed a crazy bug with generating new commitments as well as getting neighbors...

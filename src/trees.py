@@ -62,7 +62,7 @@ class TreeNode:
             elif node is False:
                 return "leaf"
             s = [f'{repr(node.data)} {str(id(node))[-5:]} -> parent {repr(node.parent.data) if node.parent else "root"} {str(id(node.parent))[-5:]} ({"" if node.is_complete else "in"}complete)']
-            s[0] += f' {node.is_left_child} {node.is_right_child} {node.is_third_child}'
+            #s[0] += f' {node.is_left_child} {node.is_right_child} {node.is_third_child}'
             bullet = '*' if depth % 2 else '>'
             s.append(f'{" " * depth * 2}{bullet} {helper(node.left, depth +1)}')
             s.append(f'{" " * depth * 2}{bullet} {helper(node.right, depth +1)}')
@@ -240,6 +240,7 @@ class TreeNode:
         target_rule = node.data.l
         curr = tree
         while curr and curr.data.rule != target_rule:
+            TreeNode._set_parent_ptrs(curr)
             curr = curr.parent
         if curr is None:
             print('looking for', target_rule)

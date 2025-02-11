@@ -180,7 +180,6 @@ class AStar(ABC, Generic[T]):
             current = openSet.pop()
             #print('graph node', id(current.data), current.data)
             #print('tree node', id(current.data.node), current.data.node)
-            #_ = input('')
 
             if self.path_is_goal_reached(current, goal):
                 return self.reconstruct_path(current, reversePath)

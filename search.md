@@ -268,6 +268,14 @@ parent_tree/tree is the Adv' node
 still significantly slower with memoization `T_T`
 * 0.1057s without to 1.257s with for `+++++`
 * 23.405s without to idk really long, too long for `>+>+++>`
+* 42.749s without memoization for `>+>+++>+++++++>++++++++++<<<<-`
+    * after I got rid of tree generation stuff, which is pretty good
+    * tbh I think I got ludicrous time savings from when I first started, just by caching graph nodes and rules
+
+TODO:
+* experiment with seeing if it's possible to get the program to use memoized nodes in its execution, I feel like that should be faster but it's really not...
+    * anything using `[` and `]` is going to be a nightmare, I feel like I should just use memoization for that...
+* consider just moving on to next idea for graph search
 
 spending a lot of time on copying trees, maintaining that list, etc with memoization...
 * str commitments
@@ -285,3 +293,58 @@ DONE:
 * fixed a bug when memoizing new trees that shouldn't have had child attributes
 * fixed a bug where `is_complete` wasn't getting casted to a bool
 * fixed a crazy bug with generating new commitments as well as getting neighbors...
+
+# 2025-02-10
+ideas on how to continue:
+* modify the function to memoize trees only when we're at an exite node, i.e to reconstruct them from the path, not as we go
+* analyze why trees are *never* getting chosen as paths.
+    * only memoize trees that show up in our final path
+    * rerun a search algorithm with those trees, do any get used? I feel like it has to be a problem with our search
+
+ok, so my path thing was actually incorrect, we *are* using memoized trees
+* furthermore, if we don't memoize as we go, it does take *longer* for us to come to an answer, for `>+>` it's a difference of 3 to 13 seconds
+* the paths that I'm seeing with and without memoization are the same
+* but really and truly, at the end of the day even with memoization I can't see this strategy ever actually working, so I think I'm going to scrap this -- but take all that I learned from it, which is a lot -- and go with my tree approach
+
+## tree search:
+### neighbors
+* when we start searching, every rule is available to us as a node/neighbor
+    * minutia: somewhere in here there's some nuance about left recursive rules ??
+* once we pick a node/neighbor, the next neighbors are all the rules we can use to complete the current tree. we travel *DOWN* the tree.
+    * minutia: is this BFS or DFS? probably BFS, I would assume, so we pick the node that has the least depth that has an incomplete part and recurse on that
+* once a tree is complete, we travel *UP* the tree until we get to `S: DP VP`
+
+once we reach the root, we take whatever, idk, "productive" part of the path we find, the substring that exists in the bf code we're looking for, and calculate the "remainder" of that. we split the bf program around this, add the relevant remainders, and recurse.
+
+### heuristic
+* we look at the *entire* program
+* we compare the current bf program being generated to the entire search program, the score is how much we have that's contiguously similar (this lowkey seems pretty expensive, but I claim we can chunk up a bf program into regions of constant size)
+    * we weight "rare" things. for example, if we have a `]` or `[` that should be so much more valuable than a `>` or `<`. So maybe not "rare", but things that we think will produce a significant remainder
+    * we could potentially do even better if we acknowledge that our tree has "gaps" in it. so for example, we insert a "space" where incomplete nodes are. then "++ >>-" could map to "++(+>)>>-" with probably some negative weight...
+
+### memoization
+* can access fucking anything we want, at the start of a program, in our table, or "target rule" trees as we go
+* I could probably do something smart to limit the size of my memoization table. I memoize everything, but when I pull neighbors, to decrease the branching, I only look at a constant number of the most "popular" trees. the trees that have been used the most. this creates a positive reinforcement effect, so if I ever use a tree that's *not* popular, i.e I recreate it, then I give it a boosted count whose size is proportional to the constant number of trees in my memoization set
+
+### advantages
+* this just seems so much more "rule aware". if I have a `]` otherwise, first I have to search through every possibility of useless shit that I can see before I get to `]` and start moving forwards with that
+* this respects the idea of "remainders". to continue the `]` example, in the graph search program I have to arrive at `]` already "neutral". Again this is *so* incredibly against what our heuristic function wants us to do, this is never going to happen. but my rules are set up so that ideally, the size of remainders needed will always decrease, which pretty much means that programs and their representations are finite
+* it's symmetric in terms of remainders, which is nice, they can happen on both sides of a desired rule
+* this builds the trees as I go, which feels like a more honest representation of the final product than the graph search thing (although conceptually, graph search was just really fucking cool as an idea)
+
+
+copying nodes:
+* when we produce possible children to go to, we always set their parent. however, we don't set the parent node's, say, left pointer, to go to
+    * when we choose a child, we do set the parent's left pointer
+* when we produce possible parents to go to, we don't set the current node's parents, but the do set the new node's children
+    * when we choose a parent, we do set the current node's parent pointer
+
+LCS with wildcards:
+* i.e [...+ + None > > - >...]
+* TODO: figure this out, lol
+
+TODO:
+* probably need to start doing copies on tree search, that looks super fucked up right now...
+
+DONE:
+* created `choice_search` method for new tree search (no memoization for now)

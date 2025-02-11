@@ -5,6 +5,61 @@ from astar import AStar
 from math import inf
 import copy
 
+class TreeNode(TreeNode):
+    @classmethod
+    def find_right_recursive(cls, tree):
+        '''
+        Return the next ancestor that has a left node
+        '''
+        if tree.left:
+            return tree
+
+        c = tree
+        while c and c.parent is not None:
+            TreeNode._set_parent_ptrs(c)
+            if c.is_left_child:
+                return c.parent
+            c = c.parent
+        raise Exception("find right recursive failed")
+
+    @classmethod
+    def insert_left_recursive_node(cls, tree, node, copy=True):
+        '''
+        Climb up the tree until the current node's rule is the left rule of what we want to insert...
+        THERE IS AMBIGUITY HERE. This algorithm assumes, possibly incorrectly, that the first place to insert
+        a rule is the one we want.
+        '''
+        if not (tree and node):
+            raise Exception('invalid insertion...')
+        target_rule = node.data.l
+        curr = tree
+        while curr and curr.data.rule != target_rule:
+            TreeNode._set_parent_ptrs(curr)
+            curr = curr.parent
+        if curr is None:
+            print('looking for', target_rule)
+            print('inserting rule', node.data)
+            print(tree.get_root_and_correct_parents())
+            raise Exception('invalid insertion, left rule not in tree...')
+
+        if copy:
+            #curr = cls.copy_subtree(curr)
+            # ^ this would've been elegant but it doesn't work
+            curr = cls.copy_tree(curr)
+        # we make a copy so we don't fuck with the tree if we need to backtrack
+
+        # insert the node at curr
+        node.parent = curr.parent
+        curr.parent = node # change the parents
+        node.is_left_child = curr.is_left_child
+        node.is_right_child = curr.is_right_child
+        TreeNode._set_parent_ptrs(node) # left/right child status
+
+        curr.is_left_child = True
+        curr.is_right_child = None
+        node.left = curr # insert curr as left child of node
+        return node
+
 class GraphNode:
     '''
     Produces a graph of an in-order traversal of the recursive binary tree `tree`
@@ -285,9 +340,7 @@ class GraphFinder(AStar):
             current.cache = TreeNode.copy_tree(came_from.cache)
 
         parent_tree = current.cache
-        '''
-        Generate the tree
-        '''
+        # Generate the tree
         current_node = TreeNode(current_rule)
 
         if parent_tree is None:
@@ -317,15 +370,13 @@ class GraphFinder(AStar):
 
         current.cache = current_node
 
-        '''
-        if the node is an exit node:
-            * convert the node and what came before it into a tree
-            * but stop, as soon as the tree becomes incomplete
-            * then memoize the tree and its phrases
-        actually:
-            * just memoize current tree
-        TODO: make this more memory efficient by only creating trees in this case
-        '''
+        #if the node is an exit node:
+        #    * convert the node and what came before it into a tree
+        #    * but stop, as soon as the tree becomes incomplete
+        #    * then memoize the tree and its phrases
+        #actually:
+        #    * just memoize current tree
+        #TODO: make this more memory efficient by only creating trees in this case
         if gn.is_exit:
             TreeNode.memoize_tree(M.table, current_node)
         #_ = input("")
@@ -388,9 +439,9 @@ class GraphFinder(AStar):
                 gn.get_neighbors()
                 is_reached &= current.data.gn.is_terminal
             elif current.data.tree:
-                is_reached &= current.cache.get_root().is_complete
-            if is_reached:
-                print(current.cache.get_root())
+                is_reached &= gn.is_exit and current.cache.get_root().is_complete
+            #if is_reached:
+                #print(current.cache.get_root())
         return is_reached
 
 import re
@@ -438,13 +489,20 @@ def main():
 
     import time
     stime = time.time()
+    #paths = find_bf('>+>+++>+++++++>++++++++++<<<<-')
     paths = find_bf('>+>')
     print(time.time()-stime)
     #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
     #paths = find_bf('.+[.+]')
     for p in paths:
         for n in p:
-            print(repr(n.gn), end=' ')
+            if n.tree:
+                print('(', end='')
+                for tn in n.tree.get_data():
+                    print(repr(tn), end=" || ")
+                print(')', end='')
+            elif not n.gn.is_choice:
+                print(repr(n.gn.node), end=" || ")
     print('')
 
 

@@ -39,6 +39,7 @@ class TreeNode:
                 (self.right is False or self.right and self.right.is_complete) and
                 (self.third is False or self.third and self.third.is_complete)
         )
+        #TreeNode._set_parent_ptrs(self)
         if self._is_complete and self.parent:
             self.parent.update_is_complete()
         return self._is_complete
@@ -154,7 +155,7 @@ class TreeNode:
         Helper function to copy just the individual data of a single node
         Includes the parent
         '''
-        new = TreeNode(node.data)
+        new = cls(node.data)
         new.is_left_child = node.is_left_child
         new.is_right_child = node.is_right_child
         new.is_third_child = node.is_third_child
@@ -229,44 +230,6 @@ class TreeNode:
         return curr
 
     @classmethod
-    def insert_left_recursive_node(cls, tree, node, copy=True):
-        '''
-        Climb up the tree until the current node's rule is the left rule of what we want to insert...
-        THERE IS AMBIGUITY HERE. This algorithm assumes, possibly incorrectly, that the first place to insert
-        a rule is the one we want.
-        '''
-        if not (tree and node):
-            raise Exception('invalid insertion...')
-        target_rule = node.data.l
-        curr = tree
-        while curr and curr.data.rule != target_rule:
-            TreeNode._set_parent_ptrs(curr)
-            curr = curr.parent
-        if curr is None:
-            print('looking for', target_rule)
-            print('inserting rule', node.data)
-            print(tree.get_root_and_correct_parents())
-            raise Exception('invalid insertion, left rule not in tree...')
-
-        if copy:
-            #curr = cls.copy_subtree(curr)
-            # ^ this would've been elegant but it doesn't work
-            curr = cls.copy_tree(curr)
-        # we make a copy so we don't fuck with the tree if we need to backtrack
-
-        # insert the node at curr
-        node.parent = curr.parent
-        curr.parent = node # change the parents
-        node.is_left_child = curr.is_left_child
-        node.is_right_child = curr.is_right_child
-        TreeNode._set_parent_ptrs(node) # left/right child status
-
-        curr.is_left_child = True
-        curr.is_right_child = None
-        node.left = curr # insert curr as left child of node
-        return node
-
-    @classmethod
     def _set_parent_ptrs(cls, node):
         # ensure a node's parent pointers are correct
         if node.is_left_child:
@@ -276,22 +239,18 @@ class TreeNode:
         elif node.is_third_child:
             node.parent.third = node
 
-
     @classmethod
-    def find_right_recursive(cls, tree):
-        '''
-        Return the next ancestor that has a left node
-        '''
-        if tree.left:
-            return tree
-
-        c = tree
-        while c and c.parent is not None:
-            TreeNode._set_parent_ptrs(c)
-            if c.is_left_child:
-                return c.parent
-            c = c.parent
-        raise Exception("find right recursive failed")
+    def _set_child_ptrs(cls, node):
+        # ensure a node's children
+        if node.left:
+            node.left.parent = node
+            node.left.is_left_child = True
+        if node.right:
+            node.right.parent = node
+            node.right.is_right_child = True
+        if node.third:
+            node.third.parent = node
+            node.third.is_third_child = True
 
     @classmethod
     def memoize_tree(cls, memo, node):

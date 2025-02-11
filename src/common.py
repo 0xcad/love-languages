@@ -6,10 +6,12 @@ def combine_bf(*args) -> list:
                    ((ops[0] == '>' and ops_path[-1] == '<') or
                    (ops[0] == '<' and ops_path[-1] == '>') or
                    (ops[0] == '+' and ops_path[-1] == '-') or
-                   (ops[0] == '-' and ops_path[-1] == '+')
+                   (ops[0] == '-' and ops_path[-1] == '+') or
+                   (ops[0] == None and ops_path[-1] == None)
                    )):
                 del ops[0]
-                ops_path.pop()
+                if ops_path[-1] is not None:
+                    ops_path.pop()
             ops_path.extend(ops)
         return ops_path
     ops_path = args[0]

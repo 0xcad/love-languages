@@ -79,6 +79,7 @@ class OpenSet(Generic[SNType]):
 
 class AStar(ABC, Generic[T]):
     __slots__ = ()
+    _goal = None
 
     @abstractmethod
     def heuristic_cost_estimate(self, current: T, goal: T) -> float:
@@ -165,6 +166,7 @@ class AStar(ABC, Generic[T]):
     def astar(
         self, start: T, goal: T, reversePath: bool = False
     ) -> Union[Iterable[T], None]:
+        self._goal = goal
         if self.is_goal_reached(start, goal):
             return [start]
 

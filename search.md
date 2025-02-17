@@ -348,3 +348,68 @@ TODO:
 
 DONE:
 * created `choice_search` method for new tree search (no memoization for now)
+
+# 2025-02-16
+debugging shit
+
+we choose `D': NP` which our algorithm seems to like
+* we add an NP: NP Conj NP on that. however that's no good, we backtrack and try `NP : N'`
+* so *ideally* we would have `NP: N'` being inserted as the *right* child. however now we end up inserting on the *third* child, so the `D': NP` still has the `NP: NP Conj NP` on it
+
+so when we go back to a new neighbor, I guess before we add anything we need to *clear* the space, or just start replacing roots
+* I guess -- backtracking should remember where a root has been, when we add it? at least if we're growing down. so maybe -- we add a node, we remember it's children.
+* this only happens if we backtrack, so like, neighbors are already called. I think we can do this in the path heuristic function though?
+* oh, shit, here's a potential problem. because we're doing "yield from", the neighbors function is getting called with the *current* tree every time?
+    * yield i think is still lowkey better from a memory perspective but what do I know
+    * yeah already that seems to help shit, but we also have a problem now in that if I have both left and right children available my tree still might not work, so I should go through with that prev idea
+* this will produce more problems still. imagine if we add a child node A, add a few more parents to the root, then backtrack to use child node B instead. the tree will now have those parents added, which is wrong. so perhaps a node needs to remember its root, or a search node needs to inherit the root of its parent, unless we're adding another root?
+    * this does give us an easy invariant though, that the number of nodes in a tree should be equal to the number of items in the path, and if that's not true we fucked up somewhere
+
+another bug: - FIXED
+* trees aren't being listed as complete if they actually are... fixed?
+* NONE's are being canceled out when they shouldn't be, huge problem - fixed
+
+another bug: - kinda FIXED
+* some trees are being marked as 'complete' but they have incomplete children
+    * what happens: we go to a neighbor, let's say a leaf, we add it, the node becomes complete. then if we backtrack, add an incomplete node, that node should no longer be complete
+
+another bug: - COULD NOT REPRODUCE (??)
+I see a `]` in the ops path and yet the fscore is only `-5`, not `inf`
+    * idk, could not reproduce, fuck, what do I know
+
+another bug: - CONSIDERED
+* the original goal was to find the *highest* incomplete node and recurse on that. however, a bug in the code meant that I was only ever finding the highest incomplete on the left subtree, effectively just doing a DFS. tbh though, DFS might just be better
+
+revising earlier bug: - DONE
+* is it always the case that when we insert a left child (since we insert left children first), that the right siblings should not be true?
+* we have subtree `A`, we insert a bunch of shit on the left, then eventually `B`. `B` is an exit node, it has two leafs, so we start inserting things to the right of `A` (why? - because that means now that everything from `A` to `B` is complete)
+* I'm just convinced that I need to copy nodes, I couldn't get by otherwise. I need to switch between two possible "realities" essentially (??), I could lose cousins if I don't copy (??)
+* if we can backtrack to a node, that means we called `get_neighbors()` on it before. I claim somehow that I only need to copy a node when I call `get_neighbors()` on it, but what do I know
+
+in DFS, where can we even go?
+* a node is the direct child of what came before it
+* a node is the direct parent of what came before it
+* two nodes are unrelated even though they were inserted chronologically
+    * a node is a right child -- in which case what came before it was an exit node
+    * a node is a parent -- in which case what came before it was an exit node
+
+astar:
+* get the min node that we have to go on
+* check if a goal is reached
+    * otherwise, get neighbors
+    * for each neighbor, calculate its score using heuristic
+    * add neighbor as a candidate
+
+DONE:
+* made progress on a bug coming from `yieldfrom` that produced incorrect trees
+    * part of the bug is still fixed, but conceptually, it's possible we may still find error
+* fixed a conceptual bug where I had 'Nones' cancel out, that was bad
+* fixed a bug about tree completeness
+* identified that I'm actually doing a DFS (lol, rip)
+* fixed an earlier bug where I just started copying trees
+* fixed a bug with my heuristic
+* created a `d_id` (debug id) for debugging
+
+idea:
+* words cost asymptotically more the more we have, to discourage long sentences? but also long sentences allow for looping, which we like...
+* make leafs cost less in the short run? just to encourage the tree to do that?

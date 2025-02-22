@@ -416,7 +416,7 @@ class GraphFinder(AStar):
                 h += 0.2 # TODO: tweak these values, idk
 
         h += len(goal[i:])
-        print(curr, ' ' * 20, '\r', end='')
+        #print(curr, ' ' * 20, '\r', end='')
         return h
 
     def distance_between(self, n1, n2):
@@ -490,7 +490,7 @@ def main():
     import time
     stime = time.time()
     #paths = find_bf('>+>+++>+++++++>++++++++++<<<<-')
-    paths = find_bf('>+>')
+    paths = find_bf('>>>>>>>>')
     print(time.time()-stime)
     #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
     #paths = find_bf('.+[.+]')

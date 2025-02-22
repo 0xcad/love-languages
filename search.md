@@ -413,3 +413,100 @@ DONE:
 idea:
 * words cost asymptotically more the more we have, to discourage long sentences? but also long sentences allow for looping, which we like...
 * make leafs cost less in the short run? just to encourage the tree to do that?
+
+TODO:
+* there's a problem somewhere (happens whenever did error happens) where our path isn't the same length as our tree. it's wrong, it's weird
+* conceptually: how do we make a tree "surface" quicker? I liked that idea about words costing asymptotically more as sentence gets longer but idk how to do that exactly
+
+# 2025-02-17
+misc notes:
+* longest overlap may not be highest cost overlap, so I need to fix that
+    * i.e `- ] None >>>` could overlap with `-]` and `>>>` but `-]` is higher cost
+* idea: at a certain point just flush the open set, as in get rid of everything but current node. this prevents backtracking -> finds lowest cost to surface, effectively
+    * or for same effect -- instead of flushing just add a *massive* point deduction. the problem is, when do I do this? it feels like something I should modify afterwards?
+
+note from debugging:
+* when building *down*, i.e at incomplete nodes, should I remove the ability to do recursive nodes? that's only an option when building up?
+
+* also, I have a node that looks like
+`['>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', '>', None]`
+with an fscore of -2 and a heuristic score of -18. bump that heuristic score up, that's way more valuable.
+
+discovered something arguably pretty great, but it's another bug:
+* I found a path
+['>', '>', '>', '>', '>', '>', '>', '>', '>'] >>>>>>>>>
+fscore -6.0 -18
+that's literally just a *complete* sentence that is the *entire* input string (The noun and the noun verb)
+and yet we did not return. what's the problem? this is *perfect*, why didn't we exit?
+
+# 2025-02-19
+ok, shit I think I might understand why this doesn't work
+my node requires I call `self.neighbors` on it in order to actually, like, correct it. when I generate neighbors I can't be sure if any of them are correct because I haven't actually connected the neighbors to the tree yet
+
+# 2025-02-22
+I call the heuristic cost estimate on all of my neighbors. however, this feels like the *wrong* place to do that, since no neighbor is actually fully connected at this point. tbh I'm not even sure how this has been working so far. i feel like what would just be *easier* would be to make it so that neighbors are always complete trees? or perhaps -- to have the heruistic add, then "undo" a neighbor?
+
+tbh not copying literally fucking everything at this point might be premature optimization.
+
+so we definitely have a bug in `copy_tree`, that's fucking shit up (left/right pointers not working)
+
+wtf is this bug:
+```
+>>> x=[n.get_root() for n in t.get_neighbors()]
+>>> print(x[0])
+`N': AP N'` 54128 -> parent root 54128 (incomplete) +
+  * incomplete
+  * incomplete
+
+>>> x=[n for n in t.get_neighbors()]
+>>> print(x[2].get_root())
+`N': AP N'` 54128 -> parent root 54128 (incomplete) +
+  * `AP: A'` 11216 -> parent `N': AP N'` 54128 (complete) +
+    > leaf
+    > `A': A` 59760 -> parent `AP: A'` 11216 (complete) +
+      * leaf
+      * leaf
+  * incomplete
+```
+
+```
+>>> print(t)
+`AP: A'` 11216 -> parent `N': AP N'` 54128 (incomplete) +
+  * leaf
+  * incomplete
+>>> print(t.get_root())
+`N': AP N'` 54128 -> parent root 54128 (incomplete) +
+  * `AP: A'` 11216 -> parent `N': AP N'` 54128 (incomplete) +
+    > leaf
+    > incomplete
+  * incomplete
+
+>>> n=list(t.get_neighbors())
+>>> print(n[0].get_root())
+`N': AP N'` 54128 -> parent root 54128 (incomplete) +
+  * incomplete
+  * incomplete
+>>> n
+[incomplete A': AdvP A' tree, incomplete A': A' Conj A' tree, complete A': A tree]
+>>> print(n[1].get_root())
+`N': AP N'` 54128 -> parent root 54128 (incomplete) +
+  * incomplete
+  * incomplete
+>>> print(n[2].get_root())
+`N': AP N'` 54128 -> parent root 54128 (incomplete) +
+  * `AP: A'` 11216 -> parent `N': AP N'` 54128 (complete) +
+    > leaf
+    > `A': A` 98992 -> parent `AP: A'` 11216 (complete) +
+      * leaf
+      * leaf
+  * incomplete
+```
+
+the reason why the A' is working is probably bc it's complete, and the `is_complete` fn fixes parent pointers?
+* holy shit that took way too long to debug and fix, in the future just pick the most obvious reason why smtg could be wrong and go with that
+
+DONE:
+* fixed a bug on `copy_tree`, rip lol
+* fixed a bug in trules `T_T`
+* fixed another bug in `get_neighbors` `T_T`
+* just added copying to all neighbors, no data gets reused

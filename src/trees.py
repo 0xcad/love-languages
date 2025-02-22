@@ -39,7 +39,7 @@ class TreeNode:
                 (self.right is False or self.right and self.right.is_complete) and
                 (self.third is False or self.third and self.third.is_complete)
         )
-        TreeNode._set_parent_ptrs(self)
+        #TreeNode._set_parent_ptrs(self)
         if self.is_complete and self.parent and not self.parent.is_complete:
             self.parent.update_is_complete()
         return self._is_complete
@@ -70,7 +70,7 @@ class TreeNode:
             elif node is False:
                 return "leaf"
             s = [node.node_str()]
-            #s[0] += f' {node.is_left_child} {node.is_right_child} {node.is_third_child}'
+            s[0] += f' {node.is_left_child} {node.is_right_child} {node.is_third_child}'
             bullet = '*' if depth % 2 else '>'
             s.append(f'{" " * depth * 2}{bullet} {helper(node.left, depth +1)}')
             s.append(f'{" " * depth * 2}{bullet} {helper(node.right, depth +1)}')
@@ -233,14 +233,20 @@ class TreeNode:
                 new_sibling = cls.copy_subtree(parent.right)
                 new_parent.right = new_sibling
                 if new_sibling: new_sibling.parent = new_parent
+            else:
+                new_parent.right = curr
             if not curr.is_left_child:
                 new_sibling = cls.copy_subtree(parent.left)
                 new_parent.left = new_sibling
                 if new_sibling: new_sibling.parent = new_parent
+            else:
+                new_parent.left = curr
             if not curr.is_third_child:
                 new_sibling = cls.copy_subtree(parent.third)
                 new_parent.third = new_sibling
                 if new_sibling: new_sibling.parent = new_parent
+            else:
+                new_parent.third = curr
 
             curr.parent = new_parent
             curr = new_parent

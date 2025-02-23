@@ -510,3 +510,31 @@ DONE:
 * fixed a bug in trules `T_T`
 * fixed another bug in `get_neighbors` `T_T`
 * just added copying to all neighbors, no data gets reused
+
+holy shit even if I copy everything I still occasionally get that bug `T_T`
+
+also -- apparently doing BFS is faster than DFS, at least for string `>>>>>>>>`
+ehh, BFS to DFS is lowkey negligible difference, but I can test that more later.
+* but also -- finding `+7` using tree search is like `0.0359s` (remainder of `>>>>`), while in graph search it's like `4.638s` (no remainder)
+* doing some more tests -- I think this strategy is going to really work! fuck, maybe even without memoization! it's just that -- there's still this fucking bug in my code, lol
+
+interestingly -- bug never shows up looking for `[[[`, or `]]]`, `+++`, or `>>>>`
+* starts at `>>>>>`, speeds up at `>>>>>>>>` (I think it's gotta be a PP conj PP thing)
+
+so that bug is still a problem, but also, observe:
+* the path is equivalent to the tree I think, right ? I mean, I guess there's some ambiguity in if we did a left side rule or a right side rule. but I could just save one node per `search_node`, and build the tree from the paths
+* this requires an additional O(path length) computation every time, but realistically it's probably magnitudes better in terms of memory. how much ram does this use?
+    * it uses pretty much all of my CPU but it's only like 2% RAM after it's been running for a while, so that's probably not important.
+* once we hit one bad path though all of our future trees/paths get fucked up, which sucks
+
+* I thought at first that this only happened with Conj rules -- oh wait it totally is
+* the problem is always a CONJ rule has a third child when it shouldn't I think
+* oh my god -- are my third rules just not getting copied? are they getting reused??
+    * that looks fine though. but yes, objectively if I remove Conj rules I don't ever get this bug
+* holy shit I fucking solved it let's fucking GO!! it was a hash collision issue
+
+DONE:
+* fixed that *awful* bug holy shit
+
+Later:
+* I can go back to copying trees only in neighbors but it really doesn't matter

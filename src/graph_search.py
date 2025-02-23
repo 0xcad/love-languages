@@ -490,7 +490,8 @@ def main():
     import time
     stime = time.time()
     #paths = find_bf('>+>+++>+++++++>++++++++++<<<<-')
-    paths = find_bf('>>>>>>>>')
+    #paths = find_bf('>>>>>>>>')
+    paths = find_bf('+++++++')
     print(time.time()-stime)
     #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
     #paths = find_bf('.+[.+]')

@@ -70,7 +70,7 @@ class TreeNode:
             elif node is False:
                 return "leaf"
             s = [node.node_str()]
-            s[0] += f' {node.is_left_child} {node.is_right_child} {node.is_third_child}'
+            #s[0] += f' {node.is_left_child} {node.is_right_child} {node.is_third_child}'
             bullet = '*' if depth % 2 else '>'
             s.append(f'{" " * depth * 2}{bullet} {helper(node.left, depth +1)}')
             s.append(f'{" " * depth * 2}{bullet} {helper(node.right, depth +1)}')

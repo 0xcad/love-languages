@@ -20,9 +20,9 @@ class TreeSearchNode(TreeNode):
     def __init__(self, data, left=None, right=None, parent=None, third=None):
          super().__init__(data, left, right, parent, third)
          self.rule = self.data
-         self._d_id = None
+         #self._d_id = None
 
-    def d_id(self, arg=None):
+    '''def d_id(self, arg=None):
         arg = self if arg is None else arg
         if arg is None:
             return id(None)
@@ -30,12 +30,12 @@ class TreeSearchNode(TreeNode):
         if arg._d_id:
             return arg._d_id
         arg._d_id = id(arg)#str(id(self))[-5:]
-        return arg._d_id
+        return arg._d_id'''
 
     @classmethod
     def _copy_node(cls, node):
         new = super()._copy_node(node)
-        new._d_id = node._d_id
+        #new._d_id = node._d_id
         return new
 
     def assert_correct(self, dids=None):
@@ -171,7 +171,11 @@ class TreeSearchNode(TreeNode):
 
         # yield potential children from highest incomplete node
         # do not set target_node left/right/third pointers
-        target_node, target_rule = highest_incomplete(target_node)
+        # BFS
+        #target_node, target_rule = highest_incomplete(target_node.get_root())
+        # DFS
+        rule = target_node.rule
+        target_rule = rule.l if target_node.left is None else (rule.r if target_node.right is None else rule.third)
         for rule in RuleNode.nodes[target_rule]:
             parent = TreeSearchNode.copy_tree(target_node) # TODO
             child = TreeSearchNode(rule, parent=parent)
@@ -215,10 +219,11 @@ class TreeSearchNode(TreeNode):
         return ops_path
 
     def __hash__(self):
+        return id(self)
         def helper(node):
             if not node:
                 return hash(node)
-            return hash((helper(node.left), hash(node.data), helper(node.right)))
+            return hash((helper(node.left), hash(node.data), helper(node.right), helper(node.third)))
         root = self.get_root_and_correct_parents()
         return helper(root)
 
@@ -303,13 +308,11 @@ class TreeFinder(AStar):
         if not search_node.data:
             return self.neighbors(None)
 
-        #search_node.data = TreeSearchNode.copy_tree(search_node.data)
+        search_node.data = TreeSearchNode.copy_tree(search_node.data)
         current = search_node.data
 
-        neighbors = self.neighbors(current)
 
-        '''
-        path_len, dids = self._print_path(search_node)
+        '''path_len, dids = self._print_path(search_node)
         print('')
         print('current tree')
         print(current)
@@ -317,14 +320,22 @@ class TreeFinder(AStar):
         print('\ncurrent root')
         print(root)
         print(root.ops_path, self._goal)
-        print('fscore', search_node.fscore, self.heuristic_cost_estimate(root, self._goal))
+        print('fscore', search_node.fscore, self.heuristic_cost_estimate(root, self._goal)
 
         current.get_root_and_correct_parents().assert_correct()#.assert_correct(dids)
         assert(len(list(root.get_data())) == path_len)
+        print("*" * 80)'''
+        root = current.get_root()
+        root.assert_correct()
+        path_len, dids = self._print_path(search_node)
+        print(root)
         print("*" * 80)
-        if root.rule == RuleNode.root and root.is_complete:
-            _ = input('')
-        '''
+        #try:
+        assert(len(list(root.get_data())) == path_len)
+        #except Exception as e:
+        #    print(root)
+        #    _ = input('')
+        neighbors = self.neighbors(current)
 
         return neighbors
 
@@ -391,6 +402,15 @@ def choice_search():
 if __name__ == '__main__':
     #choice_search()
     import time
+    '''avg_time = 0
+    trials = 100
+    for i in range(trials):
+        stime = time.time()
+        #find_bf(">>>>>>>>>")
+        find_bf("+++++++")
+        avg_time += time.time()-stime
+        print(i, ' ' * 20, '\r', end='')
+    print(avg_time / trials)'''
     stime = time.time()
-    find_bf(">>>>>>>>>")
+    find_bf(">>>>>>>>")
     print(time.time()-stime)

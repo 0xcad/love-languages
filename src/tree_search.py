@@ -219,7 +219,6 @@ class TreeSearchNode(TreeNode):
         return ops_path
 
     def __hash__(self):
-        return id(self)
         def helper(node):
             if not node:
                 return hash(node)
@@ -325,7 +324,7 @@ class TreeFinder(AStar):
         current.get_root_and_correct_parents().assert_correct()#.assert_correct(dids)
         assert(len(list(root.get_data())) == path_len)
         print("*" * 80)'''
-        root = current.get_root()
+        '''root = current.get_root()
         root.assert_correct()
         path_len, dids = self._print_path(search_node)
         print(root)
@@ -334,7 +333,7 @@ class TreeFinder(AStar):
         assert(len(list(root.get_data())) == path_len)
         #except Exception as e:
         #    print(root)
-        #    _ = input('')
+        #    _ = input('')'''
         neighbors = self.neighbors(current)
 
         return neighbors
@@ -412,5 +411,5 @@ if __name__ == '__main__':
         print(i, ' ' * 20, '\r', end='')
     print(avg_time / trials)'''
     stime = time.time()
-    find_bf(">>>>>>>>")
+    find_bf("------")
     print(time.time()-stime)

@@ -197,6 +197,8 @@ class AStar(ABC, Generic[T]):
                 if gscore >= neighbor.gscore:
                     continue
 
+                neighbor.gscore = gscore
+
                 neighbor.came_from = current
                 fscore = gscore + self.path_heuristic_cost_estimate(
                     neighbor, goal
@@ -216,7 +218,7 @@ class AStar(ABC, Generic[T]):
 
                 # update the node
                 #neighbor.came_from = current
-                neighbor.gscore = gscore
+                #neighbor.gscore = gscore
                 neighbor.fscore = fscore
 
                 openSet.push(neighbor)

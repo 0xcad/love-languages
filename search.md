@@ -538,3 +538,25 @@ DONE:
 
 Later:
 * I can go back to copying trees only in neighbors but it really doesn't matter
+
+# 2025-03-08
+been a minute!
+
+TODO:
+* make the tree fn to repeatedly find max overlaps
+    * evaluate from there, probably need to make several adjustments
+    * perhaps: negative costs on `>` / `<`?
+* just to eneumerate things still left in this project:
+    * should only have like max 500 chars in a bf program at each time
+    * then need to start doing word replacements (exciting!)
+    * probably a way to input trees (wrapped in parens?) and output programs, y'know, the reverse of this bijection
+
+TODO:
+* sometimes we end early but a better score is possible later. keep the program running for a little longer to see if we can find any better options?
+    * yeah this is definitely important, sometimes we totally have a correct answer, sometimes we don't.
+
+
+DONE:
+* modified cost fn to get max overlap by cost
+* modified negative weights to use > / < with negative weights if it's only >
+* most immediate TODO is now to do a duration thing, or a memoization thing on `>` and `<` when we get single answers.... but we need a solution for `>` and `<` so our algorithm can actually terminate...

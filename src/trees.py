@@ -152,6 +152,9 @@ class TreeNode:
 
     @classmethod
     def insert_right(cls, parent, node):
+        if node is False:
+            parent.right = False
+            return
         node.parent = parent
         if parent.right is False and parent.third is not False:
             # insert into third if right is a leaf...
@@ -167,6 +170,10 @@ class TreeNode:
 
     @classmethod
     def insert_left(cls, parent, node):
+        if node is False:
+            parent.left = False
+            return
+
         if parent.left is False:
             print(parent.data, node.data)
             raise Exception('error; inserting left subtree into leaf')

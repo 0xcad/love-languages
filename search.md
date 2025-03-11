@@ -582,15 +582,16 @@ another observation:
 
 ok so I kind of babied the scores and it... works? at least just for this case, but I feel like now it's gotta be slow elsewhere...
 
-weird observation:
+weird observation: - FIXED! problem with writing global weights variables
 * searching for just `+` first produces a good result, but searching for `>[` has a recursive call that looks for just `+`, and gives me shit or hangs...
 * another example: `[>+`, when it recurses on `>+` instead of finding `>+`, it just finds only `>`, and then when it recurses on `+` it doesn't find shit...
 
 
 TODO:
 * again, from last time -- `>]` is either finding `>>>]>` (-6) or `]>` (-7), the latter is definitely better but isn't always returned
-* sometimes code hangs in a recursive call when it otherwise wouldn't? ugh, idk...
+
 
 DONE:
 * fixed some bugs?
 * adjusted costs
+* fixed another bug lets fucking go it works. like, tons of room for improvements but it fucking works hell yeah lessgo!!

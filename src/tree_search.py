@@ -3,6 +3,7 @@ from rules import RuleNode
 from trees import TreeNode, MemoTree
 from astar import AStar
 from math import inf
+import gc
 
 from collections import deque
 
@@ -281,13 +282,10 @@ nweights = {
 }
 
 class TreeFinder(AStar):
-    _pweights = pweights
-    _nweights = nweights
 
-    # TODO shit
-    _duration = 0.2
-    _best_cost = inf
-    _best_tree = None
+    def __init__(self):
+        self._pweights = pweights.copy()
+        self._nweights = nweights.copy()
 
     def astar(self, start, goal, reversePath = False):
         self._allArr = True
@@ -427,20 +425,22 @@ def invert_bf(bf):
     return inv
 
 def find_bf(bf, depth=0):
+    """
+    Recursively finds and stitches together bf segments
+    into a final solution tree.
+    """
     if not bf:
         return False
+
     print(' ' * depth, 'recursing on', bf)
 
-    '''
-    Repeatedly find bf programs and stitch them together
-    to a final solution
-    '''
+    # greedily find best program
     tf = TreeFinder()
     path = list(tf.astar(None, bf))
-    root = path[-1].get_root_and_correct_parents()
+    root = path[-1].get_root()
     score, mask = tf.heuristic_cost_estimate(root, bf)
     del tf
-    #print(mask, score, root)
+
     '''
     We're guranteed to get a contiguous string of 1's in our mask
     Find the portion of root.ops_path that ends up in bf -- call this `prog_overlap`
@@ -448,33 +448,28 @@ def find_bf(bf, depth=0):
     split bf around `prog_overlap`, l_bf, r_bf
     recurse on l_bf + l_remainder_inverse, r_remainder_inverse + r_bf
     '''
-    # find overlapping portion of program
-    bf = [c for c in bf]
     prog = root.ops_path
-    start = mask.index(1)
-    end = len(mask) - 1 - mask[::-1].index(1)
-    prog_overlap = prog[start:end+1]
+
+    start_idx = mask.index(1)
+    end_idx = len(mask) - 1 - mask[::-1].index(1)
+
+    prog_overlap = prog[start_idx:end_idx + 1]
+
     print(' ' * depth, 'found', prog_overlap, 'in', prog)
-    #print(score, root)
-    #_ = input('')
-    l_remainder = invert_bf(prog[:start] if start > 0 else None)
-    r_remainder = invert_bf(prog[end+1:] if end < len(prog) - 1 else None)
 
-    #print("hey!", prog, bf)
-    #print(prog_overlap, l_remainder, r_remainder)
-    # split bf around prog_overlap
-    start = next(i for i in range(len(bf) - len(prog_overlap) + 1) if bf[i:i+len(prog_overlap)] == prog_overlap)
-    end = start + len(prog_overlap)
-    l_bf = bf[:start] if start > 0 else []
-    r_bf = bf[end:] if end < len(bf) else []
+    l_remainder = invert_bf(prog[:start_idx] or None)
+    r_remainder = invert_bf(prog[end_idx + 1:] or None)
 
-    '''print('bf', bf)
-    print('left', l_bf)
-    print('l_remainder', l_remainder)
-    print('prog_overlap', prog_overlap)
-    print('right_remainder', r_remainder)
-    print('right', r_bf)
-    _ = input('')'''
+
+    # Find where prog_overlap matches inside bf, get l_bf and r_bf
+    bf = list(bf)
+    overlap_start = next(
+        i for i in range(len(bf) - len(prog_overlap) + 1)
+        if bf[i:i + len(prog_overlap)] == prog_overlap
+    )
+    overlap_end = overlap_start + len(prog_overlap)
+    l_bf = bf[:overlap_start]
+    r_bf = bf[overlap_end:]
 
     # recurse
     node = TreeNode(prog_overlap)
@@ -483,6 +478,7 @@ def find_bf(bf, depth=0):
 
     TreeNode.insert_left(node, left)
     TreeNode.insert_right(node, right)
+
     return node
 
 
@@ -538,8 +534,8 @@ if __name__ == '__main__':
     print(avg_time / trials)'''
 
     stime = time.time()
-    #find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++")
-    find_bf("[>+")
+    find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++")
+    #find_bf("[>+")
     #find_bf(">[")
     #find_bf_once("[")
     #find_bf("<")

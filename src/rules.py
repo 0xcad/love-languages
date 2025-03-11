@@ -14,11 +14,11 @@ rules = [
     {'rule': "DP: DP Conj DP", 'ops': ">>", "word_cost": 2},
     {'rule': "DP: Pronoun", 'ops': "<<<<", "word_cost": 1},
     {'rule': "DP: D'", 'ops': ""},
-    {'rule': "D': D NP", 'ops': ">>", "word_cost": 1},
+    {'rule': "D': D NP", 'ops': "", "word_cost": 1},
     {'rule': "D': NP", 'ops': ">>>", "right": True},
 
     {'rule': "NP: N'", 'ops': ">"},
-    {'rule': "NP: NP Conj NP", 'ops': "]"},
+    {'rule': "NP: NP Conj NP", 'ops': "]", "word_cost": 2},
     {'rule': "N': AP N'", 'ops': "+"},
     {'rule': "N': N' PP", 'ops': ""},
     #{'rule': "N': N PP", 'ops': ""},
@@ -33,7 +33,7 @@ rules = [
     {'rule': "V': TV DP", 'ops': ">", "word_cost": 1},
 
     {'rule': "DTVDP: DP DP", 'ops': ""},
-    {'rule': "V': DTV DTVDP", 'ops': ">"},
+    {'rule': "V': DTV DTVDP", 'ops': ">", "word_cost": 1},
 
     {'rule': "V': V", 'ops': "", "word_cost": 1},
     #{'rule': "V': V Comp SP", ops: "?"},

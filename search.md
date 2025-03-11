@@ -560,3 +560,37 @@ DONE:
 * modified cost fn to get max overlap by cost
 * modified negative weights to use > / < with negative weights if it's only >
 * most immediate TODO is now to do a duration thing, or a memoization thing on `>` and `<` when we get single answers.... but we need a solution for `>` and `<` so our algorithm can actually terminate...
+
+# 2025-03-10
+problem: we should have a pretty short, simple way of encoding `<` -- `I verb (for your noun)` -- Pronoun, verb, prepositional phrase. however the algorithm does not find it, like, at all, and instead comes up with weird bullshit answers instead...
+* oh, one thing is that we have equal positive weight to negative weight for `>`/`<` which could be bad?
+* ok, this is bad, too, another problem is that whenever we have an ops path of `None`, we get an infinite score which means we'll never regard this neighbor until we regard *all* fucking neighbors, super bad. so I feel like no overlap should be neutral? or if it's negative it shouldn't be by a lot? let's try neutral first
+
+I'm seeing this:
+`hey 0 10.0 [']', '>'] <`
+so somewhere there's a string with `]` in it that doesn't have inf score which is bad
+* fixed
+
+observation:
+* we'll currently try literally all paths of len 6, before we try something like `<<<` just because its score is so high
+* ^what score is that? `<<<` has a score of 5 `T_T` did I just miss it?
+    * yeah but it's neighbor has a score of 6 which is why we haven't seen it yet
+
+another observation:
+* when we're doing this, we should *never* look at any rule containing `AdvP` smtg because that will just force us to use a `-` eventually...
+* fixed by hardcoding it `(T_T)`
+
+ok so I kind of babied the scores and it... works? at least just for this case, but I feel like now it's gotta be slow elsewhere...
+
+weird observation:
+* searching for just `+` first produces a good result, but searching for `>[` has a recursive call that looks for just `+`, and gives me shit or hangs...
+* another example: `[>+`, when it recurses on `>+` instead of finding `>+`, it just finds only `>`, and then when it recurses on `+` it doesn't find shit...
+
+
+TODO:
+* again, from last time -- `>]` is either finding `>>>]>` (-6) or `]>` (-7), the latter is definitely better but isn't always returned
+* sometimes code hangs in a recursive call when it otherwise wouldn't? ugh, idk...
+
+DONE:
+* fixed some bugs?
+* adjusted costs

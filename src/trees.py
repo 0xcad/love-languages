@@ -118,6 +118,14 @@ class TreeNode:
                        node.left is None or node.right is None or node.third is None))
             if node.parent and not node.is_complete:
                 assert(not node.parent.is_complete)
+
+            # the bf is correct
+            if node.is_complete:
+                bf = []
+                for r in node.get_data():
+                    bf = combine_bf(bf, r.ops)
+                assert(bf == node.ops_path)
+
             helper(node.left)
             helper(node.right)
             helper(node.third)
@@ -358,6 +366,12 @@ class TreeNode:
         self._cost = sum(map(lambda data: data.get_cost(), self.get_data()))
         return self._cost
 
+    def get_leaf_str(self):
+        '''
+        Prints the leaves of the tree
+        '''
+        return [d for d in self.get_data() if d.word_cost >= 1]
+
     def __eq__(self, other):
         def children_equal(t1, t2):
             return ((t1 is None and t2 is None) or
@@ -375,7 +389,7 @@ class TreeNode:
     def __hash__(self):
         if not self.is_complete:
             raise Exception('hashing incomplete tree...')
-        return hash((hash(self.left), hash(self.data), hash(self.right)))
+        return hash((hash(self.left), hash(self.data), hash(self.right), hash(self.third)))
 
 
     @classmethod

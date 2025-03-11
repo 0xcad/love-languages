@@ -5,7 +5,6 @@ from astar import AStar
 from math import inf
 
 from collections import deque
-import pylcs
 
 class TreeSearchNode(TreeNode):
 
@@ -236,71 +235,74 @@ def highest_cost_common_substring(s, t, cost):
 
     if best_cost == -inf:
         #return [0] * n, best_cost
-        return [], best_cost
+        return 0, [0] * n
+    #^we just straight up return 0 now for best cost, my implementation
 
     # Extract the substring from s.
     start = best_i - best_length
     mask = [1 if start <= i and i < best_i else 0 for i in range(n)]
     #print('hey', mask, start, best_i, best_length)
     #return s[start:best_i], best_cost
-    return mask, best_cost
+    return best_cost, mask
 
 
 def heuristic(ops_path, goal, pweights, nweights):
-    substring_mask, score = highest_cost_common_substring(ops_path, goal, pweights)
+    score, substring_mask = highest_cost_common_substring(ops_path, goal, pweights)
     score *= -1
     #^ the negative (good) score due to the overlap
 
-    # this means that there is no match
-    if score == inf:
-        return score, substring_mask
-
     # if we have a perfect match then thats' pretty good
-    if len(substring_mask) == len(goal):
-        return min(-100, score), substring_mask
+    #if substring_mask == [1] * len(goal):
+    #    return min(-100, score), substring_mask
 
     # now get the cost from the parts of ops_path that aren't in goal
-    for i, mult in enumerate(substring_mask):
-        if mult == 0:
-            score += nweights.get(ops_path[i], 0) * 2
+    if score != inf:
+        for i, mult in enumerate(substring_mask):
+            if mult == 0:
+                score += nweights.get(ops_path[i], 0)
 
     return score, substring_mask
 
+pweights = {
+    "[": 12,
+    "]": 8,
+    "+": 6,
+    "-": 6,
+    #">": 2,
+    #"<": 2,
+}
+nweights = {
+    "[": inf,
+    "]": inf,
+    "+": 3,
+    "-": 3,
+    ">": 1,
+    "<": 1,
+}
 
 class TreeFinder(AStar):
-    _pweights = {
-        "[": 12,
-        "]": 12,
-        "+": 6,
-        "-": 6,
-        #">": 2,
-        #"<": 2,
-    }
-    _nweights = {
-        "[": inf,
-        "]": inf,
-        "+": 3,
-        "-": 3,
-        #">": 1,
-        #"<": 1,
-    }
+    _pweights = pweights
+    _nweights = nweights
+
+    # TODO shit
     _duration = 0.2
     _best_cost = inf
     _best_tree = None
 
     def astar(self, start, goal, reversePath = False):
-        allArr = True
+        self._allArr = True
         for c in goal:
             if c not in [None, '>', '<']:
-                allArr = False
-        if allArr:
-            self._nweights[">"] = 1
-            self._nweights["<"] = 1
+                self._allArr = False
+        if self._allArr:
+            self._nweights[">"] = 2
+            self._nweights["<"] = 2
             self._nweights["+"] = inf
             self._nweights["-"] = inf
+            self._pweights["<"] = 6
+            self._pweights[">"] = 6
 
-        self.start_time = time.time()
-        self.duration = 0.5
+        #self.start_time = time.time()
         return super(TreeFinder, self).astar( start, goal, reversePath)
 
     def _print_path(self, current):
@@ -321,11 +323,27 @@ class TreeFinder(AStar):
 
     def path_heuristic_cost_estimate(self, current, goal):
         score, substring_mask = self.heuristic_cost_estimate(current.data, goal)
-        '''root = current.data.get_root_and_correct_parents() if current.data else None
+        root = current.data.get_root() if current.data else None
+
+        # if the tree is finished but there's no overlap
         if root and root.is_complete and root.rule == RuleNode.root:
-            print('hey', score + current.gscore, root.ops_path, goal)
+            if 1 not in substring_mask:
+                return inf
+
+        '''if root and root.is_complete and root.rule == RuleNode.root:# and substring_mask == [1] * len(goal):
+            print('hey', score, score + current.gscore, root.ops_path, goal)
             print(root)
+            print(root.get_leaf_str())
             _ = input('')'''
+
+        '''
+        TODO: hack, literally hard-coded in, not great...
+        But prevent >/< goals from finding rules with AdvP / AP
+        '''
+        if self._allArr and current.data:
+            rule_str = current.data.rule.rule_str
+            if 'AP' in rule_str or 'AdvP' in rule_str:
+                return inf
         return score
 
 
@@ -341,11 +359,15 @@ class TreeFinder(AStar):
         ops_path = current.get_root().ops_path
 
         score, substring_mask = heuristic(ops_path, goal, self._pweights, self._nweights)
+        # if we have > 3 None's in our string, penalize the shit out of that
+        if ops_path.count(None) >= 3:
+            score += 20
+
         return score, substring_mask
 
     def distance_between(self, n1, n2):
         #return 1 + 5 * n2.rule.word_cost
-        return 1
+        return 0.2 + 1 * n2.rule.word_cost
 
     def path_neighbors(self, search_node):
         if not search_node.data:
@@ -354,6 +376,12 @@ class TreeFinder(AStar):
         search_node.data = TreeSearchNode.copy_tree(search_node.data)
         current = search_node.data
         neighbors = self.neighbors(current)
+
+        '''print('hey', search_node.fscore)
+        root = search_node.data.get_root()
+        print(root)
+        print(root.ops_path)
+        _ = input('')'''
 
         return neighbors
 
@@ -369,12 +397,14 @@ class TreeFinder(AStar):
         if current is None:
             return False
         root = current.get_root_and_correct_parents()
+        #goal = [c for c in goal]
+        #return root.is_complete and root.rule == RuleNode.root and root.ops_path == goal
         #return False
         # TODO, duration thing, but that may be in astar
         return root.is_complete and root.rule == RuleNode.root
 
 
-def find_bf(bf):
+def find_bf_once(bf):
     path = TreeFinder().astar(None, bf)
     print('path')
     path = list(path)
@@ -409,6 +439,8 @@ def find_bf(bf, depth=0):
     path = list(tf.astar(None, bf))
     root = path[-1].get_root_and_correct_parents()
     score, mask = tf.heuristic_cost_estimate(root, bf)
+    del tf
+    #print(mask, score, root)
     '''
     We're guranteed to get a contiguous string of 1's in our mask
     Find the portion of root.ops_path that ends up in bf -- call this `prog_overlap`
@@ -423,6 +455,8 @@ def find_bf(bf, depth=0):
     end = len(mask) - 1 - mask[::-1].index(1)
     prog_overlap = prog[start:end+1]
     print(' ' * depth, 'found', prog_overlap, 'in', prog)
+    #print(score, root)
+    #_ = input('')
     l_remainder = invert_bf(prog[:start] if start > 0 else None)
     r_remainder = invert_bf(prog[end+1:] if end < len(prog) - 1 else None)
 
@@ -430,27 +464,25 @@ def find_bf(bf, depth=0):
     #print(prog_overlap, l_remainder, r_remainder)
     # split bf around prog_overlap
     start = next(i for i in range(len(bf) - len(prog_overlap) + 1) if bf[i:i+len(prog_overlap)] == prog_overlap)
+    end = start + len(prog_overlap)
     l_bf = bf[:start] if start > 0 else []
-    r_bf = bf[end+1:] if end < len(bf) else []
+    r_bf = bf[end:] if end < len(bf) else []
 
-    print('bf', bf)
+    '''print('bf', bf)
     print('left', l_bf)
-    print('l_reaminder', l_remainder)
+    print('l_remainder', l_remainder)
     print('prog_overlap', prog_overlap)
     print('right_remainder', r_remainder)
     print('right', r_bf)
-    #_ = input('')
+    _ = input('')'''
 
-    #print("hey!")
-    #print(l_bf, r_bf)
     # recurse
-    del tf
     node = TreeNode(prog_overlap)
-    #left = find_bf(combine_bf(l_bf, l_remainder), depth+1)
-    #right = find_bf(combine_bf(r_remainder, r_bf), depth+1)
+    left = find_bf(combine_bf(l_bf, l_remainder), depth+1)
+    right = find_bf(combine_bf(r_remainder, r_bf), depth+1)
 
-    #TreeNode.insert_left(node, left)
-    #TreeNode.insert_right(node, right)
+    TreeNode.insert_left(node, left)
+    TreeNode.insert_right(node, right)
     return node
 
 
@@ -458,6 +490,7 @@ def choice_search():
     curr = None
     path = []
     neighbors = [TreeSearchNode(r) for r in RuleNode.rules.values()]
+
 
     while neighbors:
         print('-' * 80)
@@ -486,6 +519,9 @@ def choice_search():
         print(root)
         print('Current path')
         print(root.ops_path)
+        #score, mask = tf.heuristic_cost_estimate(root, '<')
+        #gscore = len(list(root.get_data()))
+        #print('fscore', score, 'gscore', gscore, 'score', gscore+score)
 
 
 if __name__ == '__main__':
@@ -496,12 +532,16 @@ if __name__ == '__main__':
     for i in range(trials):
         stime = time.time()
         #find_bf(">>>>>>>>>")
-        find_bf("+++++++")
+        find_bf_once("[[[[[")
         avg_time += time.time()-stime
         print(i, ' ' * 20, '\r', end='')
     print(avg_time / trials)'''
+
     stime = time.time()
-    #find_bf("++++++++++[>+>+++>+++++++")
-    find_bf("<")
+    #find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++")
+    find_bf("[>+")
+    #find_bf(">[")
+    #find_bf_once("[")
+    #find_bf("<")
     #find_bf(">>>>>>>>")
     print(time.time()-stime)

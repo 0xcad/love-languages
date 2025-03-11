@@ -427,8 +427,9 @@ class GraphFinder(AStar):
 
     def path_neighbors(self, search_node):
         node = search_node.data
-        for n in node.get_neighbors(M):
-        #for n in node.get_neighbors():
+        # TODO: this is where I toggle memoization
+        #for n in node.get_neighbors(M):
+        for n in node.get_neighbors():
             yield n
 
     def path_is_goal_reached(self, current, goal):
@@ -491,7 +492,7 @@ def main():
     stime = time.time()
     #paths = find_bf('>+>+++>+++++++>++++++++++<<<<-')
     #paths = find_bf('>>>>>>>>')
-    paths = find_bf('+++++++')
+    paths = find_bf('+++++++++')
     print(time.time()-stime)
     #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
     #paths = find_bf('.+[.+]')

@@ -3,7 +3,6 @@ from rules import RuleNode
 from trees import TreeNode, MemoTree
 from astar import AStar
 from math import inf
-import gc
 
 from collections import deque
 
@@ -534,7 +533,8 @@ if __name__ == '__main__':
     print(avg_time / trials)'''
 
     stime = time.time()
-    find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++")
+    #find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++")
+    find_bf("++++[>+++++<-]>[<+++++>-]+<+[>[>+>+<<-]++>>[<<+>>-]>>>[-]++>[-]+>>>+[[-]++++++>>>]<<<[[<++++++++<++>>-]+<<[>----<-]<]<<[>>>>>[>>>[-]+++++++++<[>-<-]+++++++++>[-[<->-]+[<<<]]<[>+<-]>]<<-]<<-]")
     #find_bf("[>+")
     #find_bf(">[")
     #find_bf_once("[")

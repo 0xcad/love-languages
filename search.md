@@ -595,3 +595,8 @@ DONE:
 * fixed some bugs?
 * adjusted costs
 * fixed another bug lets fucking go it works. like, tons of room for improvements but it fucking works hell yeah lessgo!!
+
+next step:
+* still, please, god, I need to figure out either how to change my costs or just make it so that we return the best answer
+    * memoization? run this thing for a certain duration and pick best answer?
+* word replacement / next stage of project goals :))

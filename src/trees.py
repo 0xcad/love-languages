@@ -333,11 +333,12 @@ class TreeNode:
         self._cost = sum(map(lambda data: data.get_cost(), self.get_data()))
         return self._cost
 
-    def get_leaf_str(self):
+    def get_leafs(self):
         '''
-        Prints the leaves of the tree
+        Prints the word leafs of the tree
         '''
-        return [d for d in self.get_data() if d.word_cost >= 1]
+        leafs = [d for d in self.get_data() if d.word_cost >= 1]
+        return [d.r if d.is_r_leaf and d.r else (d.l if d.is_l_leaf and d.l else None) for d in leafs]
 
     def __eq__(self, other):
         def children_equal(t1, t2):

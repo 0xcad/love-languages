@@ -612,7 +612,22 @@ Memoization program:
 
 Word replacement:
 * just first try a naive substitution and see what happens i guess
+* how tf does this even work? First, I should probably do parens wrapping around leafs just to like, see what a tree *is*. -DONE
+    * leafs in the same phrase get put in the same parens. so ig we do in order traversal
+Rules:
+* for the rule DP: NP, the noun must be pluralized
+    * uhh, with some exceptions in prepositional phrases?
+        i.e, `((D N) ((TV Pronoun) (P N)))` -> `Your heart soothes me with passion`
+* pronouns have to follow subject/object
+    * subject: myself, yourself
+* conjugation
+    * My noun verb*s* for your noun
+    * YOU/I verb for the noun
+
+* if we're doing a bunch of adjectives in the same noun phrase we can't use the same one twice b2b...
 
 DONE:
 * started doing memoization program, as in, wrote memoizer
 * reorganized some code from tree search to graph search
+* function to turn sentences into paren-separated leafs
+* put memoizer in `find_bf` function...

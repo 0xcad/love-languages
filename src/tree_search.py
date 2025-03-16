@@ -4,47 +4,13 @@ from trees import TreeNode, MemoTree
 from astar import AStar
 from math import inf
 
-from collections import deque
+from collections import deque, defaultdict
 
 class TreeSearchNode(TreeNode):
 
     def __init__(self, data, left=None, right=None, parent=None, third=None):
          super().__init__(data, left, right, parent, third)
          self.rule = self.data
-
-    @classmethod
-    def _copy_node(cls, node):
-        new = super()._copy_node(node)
-        #new._d_id = node._d_id
-        return new
-
-    def assert_correct(self, dids=None):
-        root = super().assert_correct()
-        if not dids:
-            return
-        dids = set(dids)
-        def correct_dids(node):
-            if not node:
-                return
-            try:
-                assert(node.d_id() in dids)
-            except Exception as e:
-                raise Exception(node.rule, node.d_id(), dids)
-            dids.remove(node.d_id())
-            correct_dids(node.left)
-            correct_dids(node.right)
-            correct_dids(node.third)
-
-        def helper(node):
-            correct_dids(node)
-            assert(len(dids) == 0)
-        try:
-            helper(root)
-            return root
-        except Exception as e:
-            print('ERROR')
-            print(root)
-            raise Exception(e)
 
     def node_str(self):
          s = super().node_str()
@@ -234,9 +200,8 @@ def highest_cost_common_substring(s, t, cost):
                 dp[i][j] = (-inf, 0)
 
     if best_cost == -inf:
-        #return [0] * n, best_cost
         return 0, [0] * n
-    #^we just straight up return 0 now for best cost, my implementation
+    #^we just return 0 now for best cost if no overlap, my implementation
 
     # Extract the substring from s.
     start = best_i - best_length
@@ -302,32 +267,16 @@ class TreeFinder(AStar):
         #self.start_time = time.time()
         return super(TreeFinder, self).astar( start, goal, reversePath)
 
-    def _print_path(self, current):
-        path_len = 1
-        dids = [current.data.d_id()]
-        came_from = current.came_from
-        print("Path (reverse order):")
-        print(repr(current.data.rule), f'({str(id(current.data))[-5:]})', end=' || ')
-        c = current.came_from
-        while c and c.data:
-            print(f'{c.data.rule} ({str(c.data.d_id())[-5:]})', end=" || ")
-            if c.data:
-                dids.append(c.data.d_id())
-            path_len += 1
-            c = c.came_from
-        print('')
-        return path_len, dids
-
     def path_heuristic_cost_estimate(self, current, goal):
         score, substring_mask = self.heuristic_cost_estimate(current.data, goal)
         root = current.data.get_root() if current.data else None
 
         # if the tree is finished but there's no overlap
-        if root and root.is_complete and root.rule == RuleNode.root:
+        if root and root.is_complete and root.rule.is_root:
             if 1 not in substring_mask:
                 return inf
 
-        '''if root and root.is_complete and root.rule == RuleNode.root:# and substring_mask == [1] * len(goal):
+        '''if root and root.is_complete and root.rule.is_root:# and substring_mask == [1] * len(goal):
             print('hey', score, score + current.gscore, root.ops_path, goal)
             print(root)
             print(root.get_leaf_str())
@@ -398,8 +347,50 @@ class TreeFinder(AStar):
         #return root.is_complete and root.rule == RuleNode.root and root.ops_path == goal
         #return False
         # TODO, duration thing, but that may be in astar
-        return root.is_complete and root.rule == RuleNode.root
+        return root.is_complete and root.rule.is_root
 
+class MemoTreeFinder(TreeFinder):
+    def is_goal_reached(self, current, goal):
+        if current is None:
+            return False
+        root = current.get_root()
+        ret = root.is_complete and root.rule.is_root and root.ops_path == list(goal)
+        if ret:
+            print(root)
+            print(root.get_leaf_str())
+            if input('save tree? (y/n) ') == 'y':
+                return True
+        return False
+
+class TreeSearchMemoTree(MemoTree):
+    _default_fname = 'ts_trees.pkl'
+    table = defaultdict(set)
+
+    def add_entry(self, tree):
+        copy = TreeSearchNode(tree.data) # the tree should have no parents
+        copy.left = tree.left
+        copy.right = tree.right
+        copy.third = tree.third
+
+        assert(copy.is_complete)
+        copy.assert_correct()
+
+        bf = ''.join(copy.ops_path)
+        self.table[bf].add(copy)
+
+    def initialize(self):
+        '''
+        Program to add entries to memoized tree
+        '''
+        user_in = None
+        while user_in != "quit":
+            if user_in:
+                print('looking for', user_in)
+                tf = MemoTreeFinder()
+                path = list(tf.astar(None, user_in))
+                root = path[-1].get_root()
+                self.add_entry(root)
+            user_in = input('Enter bf program to add to tree or `quit`: ')
 
 def find_bf_once(bf):
     path = TreeFinder().astar(None, bf)
@@ -471,7 +462,7 @@ def find_bf(bf, depth=0):
     r_bf = bf[overlap_end:]
 
     # recurse
-    node = TreeNode(prog_overlap)
+    node = TreeNode(root, third=False)
     left = find_bf(combine_bf(l_bf, l_remainder), depth+1)
     right = find_bf(combine_bf(r_remainder, r_bf), depth+1)
 
@@ -520,6 +511,9 @@ def choice_search():
 
 
 if __name__ == '__main__':
+    #M = TreeSearchMemoTree()
+    #M.load_from_file()
+
     #choice_search()
     import time
     '''avg_time = 0
@@ -534,10 +528,11 @@ if __name__ == '__main__':
 
     stime = time.time()
     #find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++")
-    find_bf("++++[>+++++<-]>[<+++++>-]+<+[>[>+>+<<-]++>>[<<+>>-]>>>[-]++>[-]+>>>+[[-]++++++>>>]<<<[[<++++++++<++>>-]+<<[>----<-]<]<<[>>>>>[>>>[-]+++++++++<[>-<-]+++++++++>[-[<->-]+[<<<]]<[>+<-]>]<<-]<<-]")
-    #find_bf("[>+")
+    #find_bf("++++[>+++++<-]>[<+++++>-]+<+[>[>+>+<<-]++>>[<<+>>-]>>>[-]++>[-]+>>>+[[-]++++++>>>]<<<[[<++++++++<++>>-]+<<[>----<-]<]<<[>>>>>[>>>[-]+++++++++<[>-<-]+++++++++>[-[<->-]+[<<<]]<[>+<-]>]<<-]<<-]")
+    sentence_tree = find_bf("[>+")
     #find_bf(">[")
     #find_bf_once("[")
     #find_bf("<")
     #find_bf(">>>>>>>>")
     print(time.time()-stime)
+    print(sentence_tree)

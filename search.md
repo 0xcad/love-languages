@@ -600,3 +600,19 @@ next step:
 * still, please, god, I need to figure out either how to change my costs or just make it so that we return the best answer
     * memoization? run this thing for a certain duration and pick best answer?
 * word replacement / next stage of project goals :))
+
+# 2025-03-16
+Memoization program:
+* in a new file, extend TreeMemo to a new class
+* create an interface where I can insert a program. I get shown trees that match that program, and I can choose whether or not I want to memoize them
+* if they get memoized, the trees get saved to dict (key is program, entries are sets containing the trees). save this to a file
+* in TreeSearch, load up the memoized tree
+* in `find_bf`, whenever a program comes in first check to see if it's in the table. if it is, use that, otherwise, just run the algorithm.
+    * profit?
+
+Word replacement:
+* just first try a naive substitution and see what happens i guess
+
+DONE:
+* started doing memoization program, as in, wrote memoizer
+* reorganized some code from tree search to graph search

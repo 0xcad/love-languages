@@ -60,6 +60,137 @@ class TreeNode(TreeNode):
         node.left = curr # insert curr as left child of node
         return node
 
+    def get_rightmost_node(self):
+        curr = self
+        while curr.left or curr.right or curr.third:
+            if curr.right or curr.third:
+                curr = curr.third if curr.third else curr.right
+            else:
+                curr = curr.left
+        return curr
+
+    @classmethod
+    def memoize_tree(cls, memo, node):
+        '''
+        Starting at the node `node`, go up its ancestors while each one is complete
+        memoize the subtree rooted at that node
+        '''
+        c = node
+        while c and c.is_complete:
+            if type(c.data) == RuleNode:
+                key = c.data.rule
+                h = c.__hash__()
+                if h not in memo.get(key, set()):
+                    c.ops_path # compute the ops path before memoization
+
+                    copy = cls(c.data) # the tree should have no parents
+                    copy.left = c.left
+                    copy.right = c.right
+                    copy.third = c.third
+                    memo[key] = memo.get(key, set()).union(set([copy]))
+            cls._set_parent_ptrs(c)
+            c = c.parent
+
+        return memo
+
+    @classmethod
+    def construct_down_from_tree(cls, node, max_height):
+        '''
+        Return all possible complete subtrees starting from node, of height
+        less than max_height
+        '''
+        if max_height <= 0:
+            return None
+
+        if node.is_complete:
+            yield node
+
+        r_trees = []
+        l_trees = []
+        # get all possible right/left subtrees
+        def create_children(child_list, child_tree, target_rule):
+            if child_tree is None:
+                for rule in RuleNode.nodes.get(target_rule, set()):
+                    root = cls(rule)
+                    for child in cls.construct_down_from_tree(root, max_height-1):
+                        child_list.append(child)
+        create_children(r_trees, node.right, node.data.r)
+        create_children(l_trees, node.left, node.data.l)
+        create_children(r_trees, node.third, node.data.third)
+        l_trees = l_trees if l_trees else [None]
+        r_trees = r_trees if r_trees else [None]
+
+        # create all products of left/right trees
+        for left, right in itertools.product(l_trees, r_trees):
+            node = cls._copy_node(node)
+            if left:
+                cls.insert_left(node, left)
+            if right:
+                cls.insert_right(node, right)
+            if node.is_complete:
+                yield node
+
+    @classmethod
+    def construct_from_tree(cls, node, max_height):
+        '''
+        Return all possible trees starting from node, of height
+        less than max_height
+        '''
+        if max_height <= 0:
+            return None
+
+        rule = node.data
+        '''
+        The tree is not complete
+        Find out if it needs a left or right child
+        '''
+        if not node.is_complete:
+            for tree in cls.construct_down_from_tree(node, max_height):
+                yield tree
+            return None
+        '''
+        The tree is complete
+        Add a parent to it, and then recurse on that
+        '''
+        assert(not node.parent)
+        assert(not node.is_left_child and not node.is_right_child and not node.is_third_child)
+        yield node
+
+        for l_parent in RuleNode.nodes_by_left.get(rule.rule, set()):
+            lnode = cls.copy_subtree(node)
+            parent = cls(l_parent)
+            cls.insert_left(parent, lnode)
+            yield from cls.construct_from_tree(parent, max_height - 1)
+
+        for r_parent in RuleNode.nodes_by_right.get(rule.rule, set()):
+            rnode = cls.copy_subtree(node)
+            parent = cls(r_parent)
+            cls.insert_right(parent, rnode)
+            yield from cls.construct_from_tree(parent, max_height - 1)
+
+        for t_parent in RuleNode.nodes_by_third.get(rule.rule, set()):
+            tnode = cls.copy_subtree(node)
+            parent = cls(t_parent)
+            cls.insert_right(parent, tnode)
+            yield from cls.construct_from_tree(parent, max_height - 1)
+
+class MemoTree(MemoTree):
+    # 25 trees of height 6
+    # crazy number of trees of length 7 and 8; or an infinite loop
+    def initialize(self, max_height=6, fname=None):
+        '''
+        Construct and memoize all complete trees of height n
+        '''
+        RuleNode.load_from_file()
+        for rule in RuleNode.rules.values():
+            if rule.is_r_leaf and rule.is_l_leaf:
+                rule_tree = self.cls(rule)
+                for tree in self.cls.construct_from_tree(rule_tree, max_height):
+                    if tree:
+                        tree.assert_correct()
+                        self.cls.memoize_tree(self.table, tree)
+        return self.table
+
 class GraphNode:
     '''
     Produces a graph of an in-order traversal of the recursive binary tree `tree`

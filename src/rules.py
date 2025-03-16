@@ -4,6 +4,8 @@ import pickle
 rules = [
     #{'rule': "SP: AnyDP VP", 'ops': ""},
     {'rule': "SP: DP VP", 'ops': "", "root": True},
+    {'rule': "SP: EXC", 'ops': ".", "root": True},
+    {'rule': "SP: QUERY", 'ops': ".", "root": True},
 
     # TODO: this will actually work, I should just also add an additional key/value for the actual rule string, and if something should be "counted" or not, i.e printed out in our tree
     #{'rule': "AnyDP: DP", 'ops': ""},
@@ -92,7 +94,7 @@ class RuleNode:
             node = RuleNode(rule_dict)
         for node in cls.rules.values():
             cls.nodes[node.rule] = cls.nodes.get(node.rule, set()).union(set([node]))
-            if node.is_root:
+            if node.is_root and not cls.root:
                 cls.root = node
 
             if not node.is_l_leaf:

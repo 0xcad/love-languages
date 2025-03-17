@@ -61,7 +61,10 @@ class TreeNode:
         return id(arg)
 
     def node_str(self):
-        return f'{repr(self.data)} {str(self.d_id())[-5:]} -> parent {repr(self.parent.data) if self.parent else "root"} {str(self.d_id(self.parent))[-5:]} ({"" if self.is_complete else "in"}complete)'
+        s = f'{repr(self.data)} {str(self.d_id())[-5:]} -> parent {repr(self.parent.data) if self.parent else "root"} {str(self.d_id(self.parent))[-5:]} ({"" if self.is_complete else "in"}complete)'
+        if self.data and type(self.data) != RuleNode:
+            s += ' ' + ''.join(self.data.ops_path)
+        return s# + ''.join(self.data.ops_path)
 
     def __str__(self):
         def helper(node, depth=1):
@@ -124,7 +127,8 @@ class TreeNode:
                 bf = []
                 for r in node.get_data():
                     bf = combine_bf(bf, r.ops)
-                assert(bf == node.ops_path)
+                condensed = combine_bf(*[list(r.ops) for r in node.get_data()])
+                assert(bf == node.ops_path == condensed)
 
             helper(node.left)
             helper(node.right)

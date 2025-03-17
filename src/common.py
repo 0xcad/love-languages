@@ -2,6 +2,7 @@ import random
 
 def combine_bf(*args) -> list:
     def helper(ops_path, ops) -> list:
+        ops_path = list(ops_path) if type(ops_path) == str else ops_path
         if ops:
             ops = [c for c in ops]
             while (ops and ops_path and
@@ -17,9 +18,9 @@ def combine_bf(*args) -> list:
                 ops_path.pop()
             ops_path.extend(ops)
         return ops_path
-    ops_path = args[0]
+    ops_path = args[0].copy()
     for i in range(1, len(args)):
-        ops = [c for c in args[i]]
+        ops = list(args[i])
         ops_path = helper(ops_path, ops)
 
     return ops_path
@@ -100,21 +101,26 @@ def tree_to_leafs(tree):
 words = {
     'Pronoun': ['I', 'YOU'],
     'D': ['YOUR', 'MY'], #the, a
-    'N': ['ADORATION', 'AFFECTION', 'AMBITION', 'APPETITE', 'ARDOUR', 'CHARM', 'DESIRE', 'DEVOTION', 'EAGERNESS', 'ENCHANTMENT', 'ENTHUSIASM', 'FANCY', 'FELLOW FEELING', 'FERVOUR', 'FONDNESS', 'HEART', 'HUNGER', 'INFATUATION', 'LIKING', 'LONGING', 'LOVE', 'LUST', 'PASSION', 'RAPTURE', 'SYMPATHY', 'TENDERNESS', 'THIRST', 'WISH', 'YEARNING'],
+    'N': [#'DARLING', DEAR, HONEY, JEWEL, 'DUCK', 'MOPPET', 'SWEETHEART',
+        'ADORATION', 'AFFECTION', 'AMBITION', 'APPETITE', 'ARDOUR', 'CHARM', 'DESIRE', 'DEVOTION', 'EAGERNESS', 'ENCHANTMENT', 'ENTHUSIASM', 'EYES', 'FANCY', 'FELLOW FEELING', 'FERVOUR', 'FONDNESS', 'HEART', 'HUNGER', 'INFATUATION', 'LIKING', 'LONGING', 'LOVE', 'LUST', 'PASSION', 'RAPTURE', 'SYMPATHY', 'TENDERNESS', 'THIRST', 'WISH', 'YEARNING'],
     'Adv': ['AFFECTIONATELY', 'ANXIOUSLY', 'ARDENTLY', 'AVIDLY', 'BEAUTIFULLY', 'BREATHLESSLY', 'BURNINGLY', 'COVETOUSLY', 'CURIOUSLY', 'DEVOTEDLY', 'EAGERLY', 'FERVENTLY', 'FONDLY', 'IMPATIENTLY', 'KEENLY', 'LOVINGLY', 'PASSIONATELY', 'SEDUCTIVELY', 'TENDERLY', 'WINNINGLY', 'WISTFULLY'],
+    # very, incredibly, intensely, beautifully, lovingly, totally, fervently
     'A': ['ADORABLE', 'AFFECTIONATE', 'AMOROUS', 'ANXIOUS', 'ARDENT', 'AVID', 'BREATHLESS', 'BURNING', 'COVETOUS', 'CRAVING', 'CURIOUS', 'DARLING', 'DEAR', 'DEVOTED', 'EAGER', 'EROTIC', 'FERVENT', 'FOND', 'IMPATIENT', 'KEEN', 'LITTLE', 'LOVEABLE', 'LOVESICK', 'LOVING', 'PASSIONATE', 'PRECIOUS', 'SWEET', 'SYMPATHETIC', 'TENDER', 'UNSATISFIED', 'WISTFUL'],
-    'V': ['ADORE', 'ATTRACT', 'CARE', 'CHERISH', 'CLING', 'DESIRE','HOLD', 'HOPE', 'HUNGER', 'LIKE', 'LOVE', 'OBSESS', 'SIGH', 'TEMPT', 'WANT', 'WISH', 'WOO', 'YEARN'],
+    'V': ['CARESS', 'DANCE', 'DREAM', 'FLIRT', 'FLUTTER', 'GAZE', 'HUNGER', 'LEAP', 'MELT', 'OBSESS', 'PINE', 'SIGH', 'SWOON', 'YEARN'],
+    # idea: reflexive verbs? We embrace, entangle, kiss, touch
+    'TV': ['ADORE', 'CARE FOR', 'CLING TO', 'CRAVE', 'DESIRE', 'HOLD', 'HOLD DEAR', 'HOPE FOR', 'HUNGER FOR', 'LONG FOR', 'LIKE', 'LOVE', 'LUST AFTER', 'PANT FOR', 'PINE FOR', 'PRIZE', 'SIGH FOR', 'SOOTH', 'TEMPT', 'THIRST FOR', 'TREASURE', 'WANT', 'WISH FOR', 'YEARN FOR'],
     'DTV': ['GIVE', 'OFFER', 'PROMISE', 'OFFER'], #DEDICATE?
-    'TV': ['ADORE', 'CARE FOR', 'CLING TO', 'DESIRE', 'HOLD DEAR', 'HOPE FOR', 'HUNGER FOR', 'LONG FOR', 'LOVE', 'LUST AFTER', 'PANT FOR', 'PINE FOR', 'PRIZE', 'SIGHT FOR', 'TEMPT', 'THIRST FOR', 'TREASURE', 'WANT', 'WISH', 'YEARN FOR'],
-    'P': ['WITH', 'IN', 'TO'],
+    'P': ['BEYOND', 'WITH', 'IN', 'LIKE', 'ON'], # TO, ON, AT, BEYOND, AFTER, LIKE
     'Conj': ['AND'],
-    'QUERY': ['WHAT?', 'BUT WHY?', 'FOR WHAT?'],
-    'EXC': ['OH!', 'PLEASE!'],
+    'QUERY': ['BUT WHY?', 'FOR WHAT?', 'CAN IT BE?'],
+    'EXC': ['OH!', 'PLEASE!' 'LORD ABOVE!'],
 }
 def tree_to_words(tree):
     '''
     Turn a tree into words
     '''
+    if tree.data.rule_str == 'SP: SP SP':
+        return tree_to_words(tree.left) + '. ' + tree_to_words(tree.right)
     leafs = tree.get_leafs()
     #print(leafs)
     #print(tree)

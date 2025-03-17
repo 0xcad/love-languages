@@ -4,6 +4,7 @@ from trees import TreeNode, MemoTree
 from astar import AStar
 from math import inf
 import random
+import re
 
 from collections import deque, defaultdict
 
@@ -14,10 +15,10 @@ class TreeSearchNode(TreeNode):
          self.rule = self.data
 
     def node_str(self):
-         s = super().node_str()
-         return s + ' ' + (self.rule.ops if self.rule.ops else '')
+        s = super().node_str()
+        return s + ' ' + (self.rule.ops if self.rule.ops else '')
 
-    def get_neighbors(self, memo=None):
+    def get_neighbors(self, exclude_SP_SP=False):
 
         def highest_incomplete(node):
             '''
@@ -82,7 +83,10 @@ class TreeSearchNode(TreeNode):
             lrules = RuleNode.nodes_by_left.get(rule.rule, set())
             rrules = RuleNode.nodes_by_right.get(rule.rule, set())#.difference(lrules)
             trules = RuleNode.nodes_by_third.get(rule.rule, set())#.difference(rrules)
+
             for l_parent in lrules:
+                if exclude_SP_SP and l_parent.rule_str == "SP: SP SP":
+                    continue
                 copy_node = TreeSearchNode.copy_tree(target_node)
                 parent = TreeSearchNode(l_parent, left=copy_node)
                 copy_node.parent = parent
@@ -91,6 +95,8 @@ class TreeSearchNode(TreeNode):
                 yield parent
 
             for r_parent in rrules:
+                if exclude_SP_SP and r_parent.rule_str == "SP: SP SP":
+                    continue
                 copy_node = TreeSearchNode.copy_tree(target_node)
                 parent = TreeSearchNode(r_parent, right=copy_node)
                 copy_node.parent = parent
@@ -338,7 +344,7 @@ class TreeFinder(AStar):
             #    yield TreeSearchNode(r)
             return [TreeSearchNode(r) for r in RuleNode.rules.values()]
         #yield from current.get_neighbors()
-        return list(current.get_neighbors())
+        return list(current.get_neighbors(exclude_SP_SP=True))
 
     def is_goal_reached(self, current, goal):
         if current is None:
@@ -393,12 +399,49 @@ class TreeSearchMemoTree(MemoTree):
                 self.add_entry(root)
             user_in = input('Enter bf program to add to tree or `quit`: ')
 
+    def update(self):
+        print(self)
+        self.initialize()
+        save = input("save? (y/n)")
+        if save == "y":
+            self.save_to_file()
+            print(self)
+
+    def delete(self):
+        user_in = None
+        split_pattern = r'\s*,\s*|\s+'
+
+        while True:
+            print(self)
+            user_in = input('Enter key to modify in tree or `quit`: ')
+            if user_in == 'quit':
+                break
+            entry = self.table[user_in]
+            names = [(self.tree_to_str(t), t) for t in list(entry)]
+            for idx, name in enumerate(names, 1):
+                print(f"{idx}. {name[0]}")
+            indices = input("\nIndices to delete: ")
+            indices = [int(i)-1 for i in re.split(split_pattern, indices)]
+
+            for i in indices:
+                tree = names[i][1]
+                entry.remove(tree)
+            print('removed entries')
+        print(self)
+        save = input("save? (y/n)")
+        if save == "y":
+            self.save_to_file()
+
+
+    def tree_to_str(self, tree):
+        return tree_to_leafs(tree)
+
     def __str__(self):
         s = []
         for key, value in self.table.items():
             s.append(key)
             for tree in value:
-                s.append("  * " + tree_to_leafs(tree))
+                s.append("  * " + self.tree_to_str(tree))
         return '\n'.join(s)
 
 
@@ -432,13 +475,15 @@ def find_bf(bf, memo = None, depth=0):
     if not bf:
         return False
 
+    bf_str = ''.join(bf) if type(bf) == list else bf
+    # print(' ' * depth, 'recursing on', bf_str)
+
     '''
     Choose from memo tree with percentage weighted on the cost of the tree
     '''
-    bf_str = ''.join(bf) if type(bf) == list else bf
     if memo and bf_str in memo.table:
         choices = list(memo.table[bf_str])
-        weights = [t.get_cost() for t in choices]
+        weights = [1/ t.get_cost() for t in choices]
         root = random.choices(choices, weights=weights, k=1)[0]
         node = TreeNode(root, third=False)
         return node
@@ -464,7 +509,7 @@ def find_bf(bf, memo = None, depth=0):
 
     prog_overlap = prog[start_idx:end_idx + 1]
 
-    #print(' ' * depth, 'found', prog_overlap, 'in', prog)
+    # print(' ' * depth, 'found', ''.join(prog_overlap), 'in', ''.join(prog))
 
     l_remainder = invert_bf(prog[:start_idx] or None)
     r_remainder = invert_bf(prog[end_idx + 1:] or None)
@@ -487,6 +532,9 @@ def find_bf(bf, memo = None, depth=0):
 
     TreeNode.insert_left(node, left)
     TreeNode.insert_right(node, right)
+
+    ops_path_tree = combine_bf(*[tree.ops_path for tree in node.get_data()])
+    assert(bf == ops_path_tree)
 
     return node
 
@@ -512,7 +560,7 @@ def choice_search():
         TreeNode._set_parent_ptrs(curr)
         print('')
 
-        neighbors = list(curr.get_neighbors())
+        neighbors = list(curr.get_neighbors(exclude_SP_SP=True))
         path.append(curr)
         #root = curr.get_root_and_correct_parents()
         root = curr.get_root()
@@ -528,16 +576,21 @@ def choice_search():
         #gscore = len(list(root.get_data()))
         #print('fscore', score, 'gscore', gscore, 'score', gscore+score)
 
+    M = TreeSearchMemoTree()
+    M.load_from_file()
+    print(tree_to_leafs(root))
+    save = input('add to memo table? (y/n)')
+    if save == 'y':
+        M.add_entry(root)
+        M.save_to_file()
+        print(M)
+
 
 if __name__ == '__main__':
     M = TreeSearchMemoTree()
     M.load_from_file()
+    #M.update()
     print(M)
-    '''M.initialize()
-    save = input("save? (y/n)")
-    if save == "y":
-        M.save_to_file()
-        print(M)'''
 
     #choice_search()
     import time
@@ -555,7 +608,8 @@ if __name__ == '__main__':
     #find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++")
     #find_bf("++++[>+++++<-]>[<+++++>-]+<+[>[>+>+<<-]++>>[<<+>>-]>>>[-]++>[-]+>>>+[[-]++++++>>>]<<<[[<++++++++<++>>-]+<<[>----<-]<]<<[>>>>>[>>>[-]+++++++++<[>-<-]+++++++++>[-[<->-]+[<<<]]<[>+<-]>]<<-]<<-]")
     sentence_tree = find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.", memo = M)
-    #find_bf(">[")
+    #sentence_tree = find_bf("++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++", memo=M)
+    #sentence_tree = find_bf(">>", memo=M)
     #find_bf_once("[")
     #find_bf("<")
     #find_bf(">>>>>>>>")
@@ -565,3 +619,4 @@ if __name__ == '__main__':
     print('tree to leafs', [tree_to_leafs(tree) for tree in sentence_tree.get_data()])
     #print(tree_to_words(sentence_tree.data))
     print([tree_to_words(tree) for tree in sentence_tree.get_data()])
+    print(''.join(combine_bf(*[tree.ops_path for tree in sentence_tree.get_data()])))

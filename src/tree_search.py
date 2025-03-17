@@ -618,5 +618,5 @@ if __name__ == '__main__':
 
     print('tree to leafs', [tree_to_leafs(tree) for tree in sentence_tree.get_data()])
     #print(tree_to_words(sentence_tree.data))
-    print([tree_to_words(tree) for tree in sentence_tree.get_data()])
+    print('. '.join([tree_to_words(tree) for tree in sentence_tree.get_data()]))
     print(''.join(combine_bf(*[tree.ops_path for tree in sentence_tree.get_data()])))

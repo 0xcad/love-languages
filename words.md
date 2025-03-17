@@ -42,7 +42,12 @@ example (exclusive filters vs inclusive filters): maybe for some words if they c
 
 example (theme/agent/object): `longing|thirst` can't ever be an agent. Longing can't ever be that first DP in an SP: DP VP (i.e, "MY LONGING HUNGERS" is just wrong). First DP can have a variety of theta grid values but it's not object...
 
+example (more DP agreement?): If we do "D noun verbs DP (DP)". If D starts as "Your" the next one is "My" and vice versa. "I care for *your* desire". also I think first DP should have a higher percentage to be "My" vs "Your", like 80 to 20.
+
 idea: maybe we traverse the tree once first to add constraints, second to add words and then those words propogate their own constraints?
+
+idea: we could sign off with "You are my <adverb> <adjective> <moppet|dear|sweetheart>. <adverb>, L.L"
+    * easy to implement too, we just have that chunk be the root and leave everything a left remainder...
 
 
 ### etc

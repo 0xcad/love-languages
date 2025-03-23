@@ -9,19 +9,19 @@ import re
 
 from collections import deque, defaultdict
 
-'''class WordNode:
-    def __init__(self, word=None, data={}):
-        pass
-        self.word = word
-        self.catagory = None
-        self.sub_catagory = data.get('sub_catagory')'''
-
 class TreeSearchNode(TreeNode):
     def __init__(
         self, data, left=None, right=None, parent=None, third=None):#,word_node=None):
          super().__init__(data, left, right, parent, third)
          self.rule = self.data
+         self.tags = {}
          #self.word_node = word_node
+
+    @classmethod
+    def _copy_node(cls, node):
+        new = super()._copy_node(node)
+        new.tags = node.tags.copy()
+        return new
 
     def node_str(self):
         s = super().node_str()
@@ -212,6 +212,7 @@ pet_name_tree = '''* SP: DP VP
 #                * Leaf'''
 
 pet_name_root = TreeSearchNode.str_to_tree(pet_name_tree)
+pet_name_root.tags['pet_name'] = True
 
 def highest_cost_common_substring(s, t, cost):
     '''
@@ -255,36 +256,9 @@ def highest_cost_common_substring(s, t, cost):
     mask = [1 if start <= i and i < best_i else 0 for i in range(n)]
     return best_cost, mask
 
-def highest_cost_common_substring_skip_none(s, t, cost):
-    '''
-    Return max cost common substring in s and t
-    BUT allow "None" to act as empty string once in `t`
-    '''
-    best_overall_cost = -inf
-    best_overall_mask = [0] * len(s)
 
-    # candidate: no skip in t
-    cost_val, mask = highest_cost_common_substring(s, t, cost)
-    if cost_val > best_overall_cost:
-        best_overall_cost = cost_val
-        best_overall_mask = mask
-
-    # now try skipping each "None"
-    for j in range(len(s)):
-        if s[j] is None:
-            s_new = s[:j] + s[j+1:]
-            c_val, mask_new = highest_cost_common_substring(s_new, t, cost)
-            if c_val > best_overall_cost:
-                best_overall_cost = c_val
-                best_overall_mask = mask_new[:j] + [0] + mask_new[j:]
-    return best_overall_cost, best_overall_mask
-
-
-def heuristic(ops_path, goal, pweights, nweights, skip_none=False):
-    if skip_none:
-        score, substring_mask = highest_cost_common_substring_skip_none(ops_path, goal, pweights)
-    else:
-        score, substring_mask = highest_cost_common_substring(ops_path, goal, pweights)
+def heuristic(ops_path, goal, pweights, nweights):
+    score, substring_mask = highest_cost_common_substring(ops_path, goal, pweights)
     score *= -1
     #^ the negative (good) score due to the overlap
 
@@ -343,6 +317,8 @@ class TreeFinder(AStar):
             # if the tree is finished but there's no overlap
             if 1 not in substring_mask:
                 return inf
+            if flag and not (substring_mask == [1] * len(goal)):
+                score += 2
 
 
         '''if root and root.is_complete and root.rule.is_root:# and substring_mask == [1] * len(goal):
@@ -367,7 +343,7 @@ class TreeFinder(AStar):
         return score
 
 
-    def heuristic_cost_estimate(self, current, goal, skip_none=False):
+    def heuristic_cost_estimate(self, current, goal, flag=False):
         '''
         score is positive weighted for everything in the overlap,
         negatively weighted for everything not in overlap
@@ -378,7 +354,7 @@ class TreeFinder(AStar):
 
         ops_path = current.get_root().ops_path
 
-        score, substring_mask = heuristic(ops_path, goal, self._pweights, self._nweights, skip_none)
+        score, substring_mask = heuristic(ops_path, goal, self._pweights, self._nweights)
         # if we have > 3 None's in our string, penalize the shit out of that
         if ops_path.count(None) >= 3:
             score += 20
@@ -420,7 +396,6 @@ class TreeFinder(AStar):
         #goal = [c for c in goal]
         #return root.is_complete and root.rule == RuleNode.root and root.ops_path == goal
         #return False
-        # TODO, duration thing, but that may be in astar
         return root.is_complete and root.rule.is_root
 
 class MemoTreeFinder(TreeFinder):
@@ -778,3 +753,7 @@ test_tree3 = TreeSearchNode.str_to_tree(test_tree3_str)
 #print(x)
 #print("*" * 10)
 #print(tree_to_words(test_tree))
+
+#l = TreeFinder().astar(pet_name_root, '+++++++', flag=True)
+#x=list(l)[-1].get_root()
+#print(tree_to_words(x))

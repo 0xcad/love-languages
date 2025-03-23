@@ -90,7 +90,7 @@ words = {
         {'word': "YOUR", 'possession': SECOND}
     ], #the, a
     'N': {
-        'uncountable': ['ADORATION', 'AFFECTION', 'AMBITION', 'APPETITE', 'ARDOUR', 'DESIRE', 'DEVOTION', 'EAGERNESS', 'ENCHANTMENT', 'ENTHUSIASM', 'EYES', 'FERVOUR', 'FONDNESS', 'HUNGER', 'INFATUATION', 'LIKING', 'LONGING', 'LOVE', 'LUST', 'PASSION', 'RAPTURE', 'SYMPATHY', 'TENDERNESS', 'THIRST', 'YEARNING'],
+        'uncountable': ['ADORATION', 'AFFECTION', 'AMBITION', 'APPETITE', 'ARDOUR', 'DESIRE', 'DEVOTION', 'EAGERNESS', 'ENCHANTMENT', 'ENTHUSIASM', {'word': 'EYES', 'pluralize': True}, 'FERVOUR', 'FONDNESS', 'HUNGER', 'INFATUATION', 'LIKING', 'LONGING', 'LOVE', 'LUST', 'PASSION', 'RAPTURE', 'SYMPATHY', 'TENDERNESS', 'THIRST', 'YEARNING'],
         'count': ['BODY', 'CHARM', 'FANCY', 'FELLOW FEELING', "HEART", {'word': "WISH", 'plural': 'WISHES'}],
     },
     'PETNAME': ['DARLING', 'DEAR', 'HONEY', 'JEWEL', 'DUCK', 'MOPPET', 'SWEETHEART'],
@@ -168,7 +168,6 @@ class WordBank:
         if depth == 0:
             self.replacement_map = {}
             self.words = self._words.copy()
-        #print(self.replacement_map)
         for leaf, (value, d) in list(self.replacement_map.items()):
             if d == depth:
                 del self.replacement_map[leaf]
@@ -192,7 +191,6 @@ class WordBank:
             return # do nothing
         self.replacement_map[leaf] = (value, depth)
         self.words[leaf] = deepcopy(self._words[leaf])
-        #print('adding', leaf, 'to replacement map', id(self.words[leaf]), id(self._words[leaf]))
 
         # map leaf -> value as well
         if value is not None:
@@ -207,7 +205,6 @@ class WordBank:
         if len(word_list) == 0:
             self.words[leaf] = deepcopy(self._words[leaf])
             word_list = self.words[leaf]
-            #print('hey', self.words[leaf], self._words[leaf], leaf)
 
         word_i = random.randrange(len(word_list))
         word_d = word_list[word_i] if replacement else word_list.pop(word_i)
@@ -229,6 +226,8 @@ class WordBank:
 
     def fill_noun(self, tags, node):
         word_d = self._select('N')
+        if tags.get('pet_name'):
+            word_d = {'word': self._select("PETNAME")}
 
         word = word_d['word']
         # PLURALIZE NOUN
@@ -240,9 +239,12 @@ class WordBank:
                     word = word[:-1] + "IES"
                 else:
                     word += "S"
+        # if we pick a plural noun (like "EYES") pluralize verb
+        if word_d.get('pluralize'):
+            node.add_tag_ancestors('pluralize')
 
         # subject shouldn't be counted as plural if it's a mass noun
-        if (tags.get('subject') and word_d.get('uncountable') and
+        elif (tags.get('subject') and word_d.get('uncountable') and
             tags.get('pluralize') and "N': N' PP" not in node.get_scope()):
             node.add_tag_ancestors('pluralize', None, True)
 
@@ -255,6 +257,8 @@ class WordBank:
         if prev is None:
             # start with first person with 80% probability
             prev = SECOND if random.random() <= 0.8 else FIRST
+        if tags.get("pet_name"):
+            prev = FIRST if random.random() <= 0.8 else SECOND
         pronouns = [d for d in pronouns if d['person'] != prev]
 
         word_d = self._select('Pronoun', pronouns)
@@ -267,10 +271,8 @@ class WordBank:
             else:
                 word = word_d['accusative']
 
-        if word_d['word'] == 'I':
-            node.add_tag_ancestors('person', FIRST)
-        elif word_d['word'] == 'YOU':
-            node.add_tag_ancestors('person', SECOND)
+        if word_d.get('person'):
+            node.add_tag_ancestors('person', word_d['person'])
 
         return Word(word, *word_d)
 
@@ -288,13 +290,15 @@ class WordBank:
     def fill_verb(self, leaf, tags, node):
         # TODO: do I need to do any filtering here based on tags?
         word_d = self._select(leaf)
+        if tags.get('pet_name'):
+            word_d = {'word': 'AM', FIRST: 'AM', SECOND: "ARE"}
 
 
         word = word_d['word']
         # CONJUGATE VERB
         if tags.get('person') == THIRD and not tags.get('pluralize'):
-            if word_d.get("THIRD"):
-                word = word_d.get("THIRD")
+            if word_d.get(THIRD):
+                word = word_d.get(THIRD)
             else:
                 parts = word.split(' ')
                 if len(parts) >= 1:
@@ -305,6 +309,9 @@ class WordBank:
                     word += 'S'
 
                 word = (word + ' ' + ' '.join(parts[1:])).strip()
+
+        else:
+            word = word_d.get(tags.get('person', 'word'), word)
         return Word(word, *word_d)
 
 
@@ -331,11 +338,11 @@ class TreeWordNode(TreeNode):
     WB = WordBank()
 
     def __init__(
-        self, data, left=None, right=None, parent=None, third=None, word=None
+        self, data, left=None, right=None, parent=None, third=None, word=None, tags={}
         ):
          super().__init__(data, left, right, parent, third)
          self.rule = self.data
-         self.tags = {}
+         self.tags = tags
          self.word = word
 
     def node_str(self):
@@ -349,8 +356,7 @@ class TreeWordNode(TreeNode):
         if not tree:
             return tree
 
-
-        root = cls(tree.data)
+        root = cls(tree.data, tags=getattr(tree, 'tags', {}))
         left = cls.cast_tree(tree.left)
         right = cls.cast_tree(tree.right)
         third = cls.cast_tree(tree.third)
@@ -407,10 +413,8 @@ class TreeWordNode(TreeNode):
         NODE RULES
         '''
         # DP RULES
-        if self.rule in ["D': NP", "D': D NP"]:
-            self.add_tag_ancestors('person', THIRD)
-            if self.rule == "D': NP":
-                self.add_tag_ancestors('pluralize')
+        if self.rule == "D': NP":
+            self.add_tag_ancestors('pluralize')
         elif self.rule == "DP: DP Conj DP":
             WB.add_replacement_map('Pronoun', depth=depth)
             WB.add_replacement_map('N', depth=depth)
@@ -449,34 +453,12 @@ class TreeWordNode(TreeNode):
         if self.right:
             self.right.fill_words(depth+1)
 
-        #print('  refreshing...', self.rule, depth)
         WB.refresh(depth)
 
 def tree_to_words(tree):
     '''
     Turn a tree into words
     '''
-    '''stack = []
-    curr = tree
-    while curr or len(stack) > 0:
-        while curr:
-            stack.append(curr)
-            curr = curr.left
-        curr = stack.pop()
-
-        print('hey!', curr.data)
-        curr = curr.right'''
-
-    '''stack = [tree]
-    curr = None
-    while len(stack) > 0:
-        curr = stack.pop()
-
-        print('hey', curr.data)
-        if curr.right:
-            stack.append(curr.right)
-        if curr.left:
-            stack.append(curr.left)'''
 
     tree = TreeWordNode.cast_tree(tree)
 
@@ -491,6 +473,8 @@ def tree_to_words(tree):
     while subject.rule not in ["DP: Pronoun", "D': NP", "D': D NP"]:
         subject = subject.third if subject.third else subject.right
     subject.add_tag("subject")
+    if subject.rule != "DP: Pronoun":
+        subject.add_tag_ancestors('person', THIRD)
 
     tree.left.fill_words()
     tree.right.fill_words()

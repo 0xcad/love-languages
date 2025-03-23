@@ -140,3 +140,10 @@ idea:
 * `WordBank.add_replacement_map(leaf)`
 * and then also modify `fill_word` to use the replacement map ofc
 * modify `_select` ofc
+
+# 2025-03-23
+
+DONE:
+* removed `skip_one` which was hacky, came up with a much more elegant solution
+* added in `pet_name` tree, lessgo
+    * and debugged that, damn

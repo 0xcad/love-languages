@@ -167,6 +167,10 @@ class TreeNode:
         if node is False:
             parent.right = False
             return
+        if node is None:
+            parent.right = None
+            return
+
         node.parent = parent
         if parent.right is False and parent.third is not False:
             # insert into third if right is a leaf...
@@ -184,6 +188,9 @@ class TreeNode:
     def insert_left(cls, parent, node):
         if node is False:
             parent.left = False
+            return
+        if node is None:
+            parent.left = None
             return
 
         if parent.left is False:
@@ -315,18 +322,25 @@ class TreeNode:
         self._ops_path = helper(self)
         return self._ops_path
 
-    def get_data(self):
+    def get_nodes(self):
         '''
-        in order generator for node data in list
+        in order generator for node nodes in list
         '''
         def helper(node):
             if not node:
                 return None
             yield from helper(node.left)
-            yield node.data
+            yield node
             yield from helper(node.right)
             yield from helper(node.third)
         return helper(self)
+
+    def get_data(self):
+        '''
+        in order generator for node data in list
+        '''
+        for node in self.get_nodes():
+            yield node.data
 
     def get_cost(self):
         '''
@@ -341,8 +355,41 @@ class TreeNode:
         '''
         Prints the word leafs of the tree
         '''
-        leafs = [d for d in self.get_data() if d.word_cost >= 1]
-        return [d.r if d.is_r_leaf and d.r else (d.l if d.is_l_leaf and d.l else None) for d in leafs]
+        return [d.get_leaf() for d in self.get_data() if d.word_cost >= 1]
+
+
+    @classmethod
+    def str_to_tree(cls, s):
+        def get_depth(line):
+            return len(line.split("* ")[0]) // 2
+        lines = s.strip().splitlines()
+        root = None
+        stack = []
+        for i, line in enumerate(lines):
+            ws, r = line.split("* ")
+            depth = len(ws) // 2
+            node = None
+            if r == "Leaf":
+                node = False
+            elif r != "None":
+                node = cls(RuleNode.rules[r])
+            is_left = i > 0 and get_depth(lines[i-1]) == depth-1
+
+            if not stack:
+                root = node
+                stack.append((depth, node))
+            else:
+                # find parent node
+                while stack and stack[-1][0] >= depth:
+                    stack.pop()
+                if stack:
+                    parent_node = stack[-1][1]
+                    if is_left:
+                        cls.insert_left(parent_node, node)
+                    else:
+                        cls.insert_right(parent_node, node)
+                stack.append((depth, node))
+        return root
 
     def __eq__(self, other):
         def children_equal(t1, t2):

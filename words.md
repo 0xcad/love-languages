@@ -67,3 +67,47 @@ DONE:
 TODO:
 * view that planning doc and start by moving `tree_to_words` to its own file...
     * and then maybe extend `TreeNode` again to have constraints/words in it?
+
+# 2025-03-21
+Goals again:
+* verb conjugation
+* subject/object
+* pool of words for certain phrases (i.e adverbs in AdvP, adjectives in NP (not conj...))
+* (less important) theta grid
+* "You are my.... `blank`"
+    * on a tree, need to also save:
+        * word
+        * word subcatagory ("moppet", "baby", a pet name)
+
+
+agreement:
+* sentence starts with `SP: DP VP`
+* case first `DP`:
+    * `DP: DP Conj DP`: recurse on second `DP` here
+    * `DP: D NP`: "it" subject, add `person: third` tag to current node and `SP`
+    * `DP: NP`: plural subject, add `pluralize: True` tag to current node and `SP`
+    * `DP: Pronoun`: do an 80/20 chance of filling with "I/you" and save result
+        * add `person: first` or `person: second` tag to current node and `SP`
+* now, start at `SP` again, and traverse `DP`, filling out words respectively
+    * we start at root in case we recursed on a `DP Conj` rule
+* when we're done we just go to VP. when we get to a `V` leaf, we look at all the constraints and conjugate/pluralize as needed
+    * TODO: what does this look like? because I'm sure I can get a general function wherin I fill in constraints, and then...
+
+TODO: what do we do next time we see a `DP`? because that `D` is either going to be "you" or "my"
+    * idea: add a `possesion: first|second|third` tag to represent this? pass up to parents as long as parents don't have that info
+    * then when we add a `D` later we see `posession` is in the parent list of tags, so we can do probability for like, not doing that...
+
+If I see a `DP: DP Conj DP`, I want to make it so the wordbanks for `Pronoun` and `N` draw *without* replacement. However I only want that change to happen under this scope. How can I do that?
+    * I could make a tag on just this level for like, "replace noun: false, replace pronoun: false". I copy the wordbank. I process left/right/third branches, then afterwards, I make the word bank what it was originally....
+
+
+# DONE
+* created function to turn strings into trees (for, "You are my `blank`" tree)
+* modified `get_neighbors` function to accomodate for partially complete trees
+* modified `heuristic` function to be more accepting of "possible" solutions" by allowing us to skip one `NONE` in solns...
+    * this yields slower times but in certain cases, more optimal solns
+* fixed a bug in `find_bf` logic -- now correctly invert bf strings
+
+* verb agreement is done
+* noun pluralization is done
+* pronoun accusatives if in DP

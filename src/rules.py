@@ -154,6 +154,11 @@ class RuleNode:
         self.rule = rule
         #print(rule, ':', self.l, self.r, self.third, '\t', self.l_leaf, self.r_leaf)
 
+    def get_leaf(self):
+        assert(self.word_cost >= 1)
+        return self.r if self.is_r_leaf and self.r else (self.l if self.is_l_leaf and self.l else None)
+
+
     def get_cost(self):
         return self.word_cost
 
@@ -164,6 +169,8 @@ class RuleNode:
         return f'`{self.__str__()}`'
 
     def __eq__(self, other):
+        if type(other) == str:
+            return self.rule_str == other
         return other and other.rule_str == self.rule_str
 
     def __ne__(self, other):

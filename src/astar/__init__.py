@@ -82,7 +82,7 @@ class AStar(ABC, Generic[T]):
     _goal = None
 
     @abstractmethod
-    def heuristic_cost_estimate(self, current: T, goal: T) -> float:
+    def heuristic_cost_estimate(self, current: T, goal: T, flag=False) -> float:
         """
         Computes the estimated (rough) distance between a node and the goal.
         The second parameter is always the goal.
@@ -91,12 +91,12 @@ class AStar(ABC, Generic[T]):
         """
         raise NotImplementedError
 
-    def path_heuristic_cost_estimate(self, current: SearchNode[T], goal: T) -> float:
+    def path_heuristic_cost_estimate(self, current: SearchNode[T], goal: T, flag=False) -> float:
         """
         Computes the estimated (rough) distance between a node and the goal.
         The second parameter is always the goal.
         """
-        return self.heuristic_cost_estimate(current.data, goal)
+        return self.heuristic_cost_estimate(current.data, goal, flag)
 
     def distance_between(self, n1: T, n2: T) -> float:
         """
@@ -164,7 +164,7 @@ class AStar(ABC, Generic[T]):
             return reversed(list(_gen()))
 
     def astar(
-        self, start: T, goal: T, reversePath: bool = False
+        self, start: T, goal: T, reversePath: bool = False, flag = False
     ) -> Union[Iterable[T], None]:
         self._goal = goal
         if self.is_goal_reached(start, goal):
@@ -175,7 +175,7 @@ class AStar(ABC, Generic[T]):
         startNode = searchNodes[start] = SearchNode(
             start, gscore=0.0, fscore=None
         )
-        startNode.fscore = self.path_heuristic_cost_estimate(startNode, goal)
+        startNode.fscore = self.path_heuristic_cost_estimate(startNode, goal, flag=flag)
         openSet.push(startNode)
 
         while openSet:
@@ -201,7 +201,7 @@ class AStar(ABC, Generic[T]):
 
                 neighbor.came_from = current
                 fscore = gscore + self.path_heuristic_cost_estimate(
-                    neighbor, goal
+                    neighbor, goal, flag
                 )
 
                 '''

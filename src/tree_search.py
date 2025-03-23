@@ -1,4 +1,5 @@
-from common import combine_bf, tree_to_leafs, tree_to_words
+from common import combine_bf
+from words import tree_to_leafs, tree_to_words
 from rules import RuleNode
 from trees import TreeNode, MemoTree
 from astar import AStar
@@ -8,11 +9,19 @@ import re
 
 from collections import deque, defaultdict
 
-class TreeSearchNode(TreeNode):
+'''class WordNode:
+    def __init__(self, word=None, data={}):
+        pass
+        self.word = word
+        self.catagory = None
+        self.sub_catagory = data.get('sub_catagory')'''
 
-    def __init__(self, data, left=None, right=None, parent=None, third=None):
+class TreeSearchNode(TreeNode):
+    def __init__(
+        self, data, left=None, right=None, parent=None, third=None):#,word_node=None):
          super().__init__(data, left, right, parent, third)
          self.rule = self.data
+         #self.word_node = word_node
 
     def node_str(self):
         s = super().node_str()
@@ -72,7 +81,16 @@ class TreeSearchNode(TreeNode):
         #target_node = self
         while target_node.is_complete and target_node.parent:
             target_node = target_node.parent
-
+        if not target_node.is_complete and target_node.rule.is_root:
+            # the target node is incomplete at root
+            # now search down the tree
+            while None not in [target_node.left, target_node.right, target_node.third]:
+                if target_node.left and not target_node.left.is_complete:
+                    target_node = target_node.left
+                elif target_node.right and not target_node.right.is_complete:
+                    target_node = target_node.right
+                else:
+                    target_node = target_node.third
 
         # either have an incomplete node, or a node with no parent
 
@@ -173,6 +191,28 @@ class TreeSearchNode(TreeNode):
         return helper(root)
 
 
+#r = RuleNode.rules
+#pet_name_tree = TreeSearchNode(r['SP: DP VP'])
+pet_name_tree = '''* SP: DP VP
+  * DP: Pronoun
+  * VP: V'
+    * Leaf
+    * V': TV DP
+      * Leaf
+      * DP: D'
+        * Leaf
+        * D': D NP
+          * Leaf
+          * NP: N'
+            * Leaf
+            * N': AP N'
+              * None
+              * None'''
+#                * Leaf
+#                * Leaf'''
+
+pet_name_root = TreeSearchNode.str_to_tree(pet_name_tree)
+
 def highest_cost_common_substring(s, t, cost):
     '''
     Return max cost common substring in s and t
@@ -213,19 +253,40 @@ def highest_cost_common_substring(s, t, cost):
     # Extract the substring from s.
     start = best_i - best_length
     mask = [1 if start <= i and i < best_i else 0 for i in range(n)]
-    #print('hey', mask, start, best_i, best_length)
-    #return s[start:best_i], best_cost
     return best_cost, mask
 
+def highest_cost_common_substring_skip_none(s, t, cost):
+    '''
+    Return max cost common substring in s and t
+    BUT allow "None" to act as empty string once in `t`
+    '''
+    best_overall_cost = -inf
+    best_overall_mask = [0] * len(s)
 
-def heuristic(ops_path, goal, pweights, nweights):
-    score, substring_mask = highest_cost_common_substring(ops_path, goal, pweights)
+    # candidate: no skip in t
+    cost_val, mask = highest_cost_common_substring(s, t, cost)
+    if cost_val > best_overall_cost:
+        best_overall_cost = cost_val
+        best_overall_mask = mask
+
+    # now try skipping each "None"
+    for j in range(len(s)):
+        if s[j] is None:
+            s_new = s[:j] + s[j+1:]
+            c_val, mask_new = highest_cost_common_substring(s_new, t, cost)
+            if c_val > best_overall_cost:
+                best_overall_cost = c_val
+                best_overall_mask = mask_new[:j] + [0] + mask_new[j:]
+    return best_overall_cost, best_overall_mask
+
+
+def heuristic(ops_path, goal, pweights, nweights, skip_none=False):
+    if skip_none:
+        score, substring_mask = highest_cost_common_substring_skip_none(ops_path, goal, pweights)
+    else:
+        score, substring_mask = highest_cost_common_substring(ops_path, goal, pweights)
     score *= -1
     #^ the negative (good) score due to the overlap
-
-    # if we have a perfect match then thats' pretty good
-    #if substring_mask == [1] * len(goal):
-    #    return min(-100, score), substring_mask
 
     # now get the cost from the parts of ops_path that aren't in goal
     if score != inf:
@@ -258,7 +319,7 @@ class TreeFinder(AStar):
         self._pweights = pweights.copy()
         self._nweights = nweights.copy()
 
-    def astar(self, start, goal, reversePath = False):
+    def astar(self, start, goal, reversePath = False, flag=False):
         self._allArr = True
         for c in goal:
             if c not in [None, '>', '<']:
@@ -272,22 +333,27 @@ class TreeFinder(AStar):
             self._pweights[">"] = 6
 
         #self.start_time = time.time()
-        return super(TreeFinder, self).astar( start, goal, reversePath)
+        return super(TreeFinder, self).astar(start, goal, reversePath, flag)
 
-    def path_heuristic_cost_estimate(self, current, goal):
-        score, substring_mask = self.heuristic_cost_estimate(current.data, goal)
+    def path_heuristic_cost_estimate(self, current, goal, flag=False):
+        score, substring_mask = self.heuristic_cost_estimate(current.data, goal, flag)
         root = current.data.get_root() if current.data else None
 
-        # if the tree is finished but there's no overlap
         if root and root.is_complete and root.rule.is_root:
+            # if the tree is finished but there's no overlap
             if 1 not in substring_mask:
                 return inf
+
 
         '''if root and root.is_complete and root.rule.is_root:# and substring_mask == [1] * len(goal):
             print('hey', score, score + current.gscore, root.ops_path, goal)
             print(root)
             print(root.get_leafs())
             _ = input('')'''
+        '''print('hey', score, score + current.gscore, root.ops_path, goal)
+        print(root)
+        print(root.ops_path)
+        _ = input('')'''
 
         '''
         TODO: hack, literally hard-coded in, not great...
@@ -297,10 +363,11 @@ class TreeFinder(AStar):
             rule_str = current.data.rule.rule_str
             if 'AP' in rule_str or 'AdvP' in rule_str:
                 return inf
+
         return score
 
 
-    def heuristic_cost_estimate(self, current, goal):
+    def heuristic_cost_estimate(self, current, goal, skip_none=False):
         '''
         score is positive weighted for everything in the overlap,
         negatively weighted for everything not in overlap
@@ -311,7 +378,7 @@ class TreeFinder(AStar):
 
         ops_path = current.get_root().ops_path
 
-        score, substring_mask = heuristic(ops_path, goal, self._pweights, self._nweights)
+        score, substring_mask = heuristic(ops_path, goal, self._pweights, self._nweights, skip_none)
         # if we have > 3 None's in our string, penalize the shit out of that
         if ops_path.count(None) >= 3:
             score += 20
@@ -330,7 +397,7 @@ class TreeFinder(AStar):
         current = search_node.data
         neighbors = self.neighbors(current)
 
-        '''print('hey', search_node.fscore)
+        '''print('hey', search_node.fscore, search_node.fscore + search_node.gscore)
         root = search_node.data.get_root()
         print(root)
         print(root.ops_path)
@@ -464,7 +531,7 @@ def invert_bf(bf):
         ">": "<",
         "<": ">",
     }
-    inv = [inv_d[c] for c in bf]
+    inv = [inv_d[c] for c in reversed(bf)]
     return inv
 
 def find_bf(bf, memo = None, depth=0):
@@ -476,7 +543,7 @@ def find_bf(bf, memo = None, depth=0):
         return False
 
     bf_str = ''.join(bf) if type(bf) == list else bf
-    # print(' ' * depth, 'recursing on', bf_str)
+    #print(' ' * depth, 'recursing on', bf_str)
 
     '''
     Choose from memo tree with percentage weighted on the cost of the tree
@@ -490,7 +557,14 @@ def find_bf(bf, memo = None, depth=0):
 
     # greedily find best program
     tf = TreeFinder()
-    path = list(tf.astar(None, bf))
+    path = None
+    if "+++" in bf_str and random.random() < 0.99995:
+        # 50% chance to use "You are my <adjectives> <petname>" type tree...
+        # so now, also do "skip none" heuristic
+        path = list(tf.astar(pet_name_root, bf, flag=True))
+        #TODO: iron this out
+    else:
+        path = list(tf.astar(None, bf))
     root = path[-1].get_root()
     score, mask = tf.heuristic_cost_estimate(root, bf)
     del tf
@@ -509,7 +583,7 @@ def find_bf(bf, memo = None, depth=0):
 
     prog_overlap = prog[start_idx:end_idx + 1]
 
-    # print(' ' * depth, 'found', ''.join(prog_overlap), 'in', ''.join(prog))
+    #print(' ' * depth, 'found', ''.join(prog_overlap), 'in', ''.join(prog))
 
     l_remainder = invert_bf(prog[:start_idx] or None)
     r_remainder = invert_bf(prog[end_idx + 1:] or None)
@@ -525,6 +599,7 @@ def find_bf(bf, memo = None, depth=0):
     l_bf = bf[:overlap_start]
     r_bf = bf[overlap_end:]
 
+
     # recurse
     node = TreeNode(root, third=False)
     left = find_bf(combine_bf(l_bf, l_remainder), memo, depth+1)
@@ -534,6 +609,7 @@ def find_bf(bf, memo = None, depth=0):
     TreeNode.insert_right(node, right)
 
     ops_path_tree = combine_bf(*[tree.ops_path for tree in node.get_data()])
+    #print(bf, ops_path_tree)
     assert(bf == ops_path_tree)
 
     return node
@@ -585,14 +661,14 @@ def choice_search():
         M.save_to_file()
         print(M)
 
-
-if __name__ == '__main__':
+def main():
     M = TreeSearchMemoTree()
     M.load_from_file()
     #M.update()
     print(M)
 
     #choice_search()
+
     import time
     '''avg_time = 0
     trials = 100
@@ -620,3 +696,61 @@ if __name__ == '__main__':
     #print(tree_to_words(sentence_tree.data))
     print('. '.join([tree_to_words(tree) for tree in sentence_tree.get_data()]))
     print(''.join(combine_bf(*[tree.ops_path for tree in sentence_tree.get_data()])))
+
+#if __name__ == '__main__':
+    #main()
+test_tree_str = '''* SP: DP VP
+  * DP: D'
+    * Leaf
+    * D': D NP
+      * Leaf
+      * NP: N'
+        * Leaf
+        * N': N
+          * Leaf
+          * Leaf
+  * VP: V'
+    * Leaf
+    * V': DTV DTVDP
+      * Leaf
+      * DTVDP: DP DP
+        * DP: Pronoun
+          * Leaf
+          * Leaf
+        * DP: D'
+          * Leaf
+          * D': NP
+            * Leaf
+            * NP: N'
+              * Leaf
+              * N': N
+                * Leaf
+                * Leaf'''
+test_tree2_str = '''* SP: DP VP
+  * DP: DP Conj DP
+    * DP: Pronoun
+      * Leaf
+      * Leaf
+    * DP: Pronoun
+      * Leaf
+      * Leaf
+  * VP: V'
+    * Leaf
+    * V': TV DP
+      * Leaf
+      * DP: D'
+        * Leaf
+        * D': NP
+          * Leaf
+          * NP: N'
+            * Leaf
+            * N': N
+              * Leaf
+              * Leaf'''
+test_tree = TreeSearchNode.str_to_tree(test_tree_str)
+test_tree2 = TreeSearchNode.str_to_tree(test_tree2_str)
+print(test_tree)
+x = tree_to_words(test_tree)
+print(x)
+#print("*" * 10)
+#tree_to_words(test_tree2)

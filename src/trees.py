@@ -134,8 +134,6 @@ class TreeNode:
             helper(node.right)
             helper(node.third)
 
-        #print('hey')
-        #print(self.get_root_and_correct_parents())
         try:
             root = self.get_root_and_correct_parents()
             helper(root)
@@ -340,7 +338,8 @@ class TreeNode:
         in order generator for node data in list
         '''
         for node in self.get_nodes():
-            yield node.data
+            if node.data:
+                yield node.data
 
     def get_cost(self):
         '''

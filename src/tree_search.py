@@ -697,8 +697,8 @@ def main():
     print('. '.join([tree_to_words(tree) for tree in sentence_tree.get_data()]))
     print(''.join(combine_bf(*[tree.ops_path for tree in sentence_tree.get_data()])))
 
-#if __name__ == '__main__':
-    #main()
+if __name__ == '__main__':
+    main()
 test_tree_str = '''* SP: DP VP
   * DP: D'
     * Leaf
@@ -747,10 +747,34 @@ test_tree2_str = '''* SP: DP VP
             * N': N
               * Leaf
               * Leaf'''
+test_tree3_str = '''* SP: DP VP
+  * DP: D'
+    * Leaf
+    * D': NP
+      * Leaf
+      * NP: N'
+        * Leaf
+        * N': N
+          * Leaf
+          * Leaf
+  * VP: V'
+    * Leaf
+    * V': TV DP
+      * Leaf
+      * DP: D'
+        * Leaf
+        * D': D NP
+          * Leaf
+          * NP: N'
+            * Leaf
+            * N': N
+              * Leaf
+              * Leaf'''
 test_tree = TreeSearchNode.str_to_tree(test_tree_str)
 test_tree2 = TreeSearchNode.str_to_tree(test_tree2_str)
-print(test_tree)
-x = tree_to_words(test_tree)
-print(x)
+test_tree3 = TreeSearchNode.str_to_tree(test_tree3_str)
+#print(test_tree)
+#x = tree_to_words(test_tree)
+#print(x)
 #print("*" * 10)
-#tree_to_words(test_tree2)
+#print(tree_to_words(test_tree))

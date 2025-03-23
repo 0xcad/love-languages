@@ -70,9 +70,13 @@ TODO:
 
 # 2025-03-21
 Goals again:
-* verb conjugation
-* subject/object
-* pool of words for certain phrases (i.e adverbs in AdvP, adjectives in NP (not conj...))
+* verb conjugation - DONE
+* subject/object - KINDA DONE?
+* noun agreement - DONE
+* switch between "your" and "my" in sentences...
+* pool of words for certain phrases (i.e adverbs in AdvP, adjectives in NP (not conj...), nouns in `DP`)
+    * adverbs in AP's also need to be different
+        * adverbs in AdvP that are modifying *another* adverb need to be the same class
 * (less important) theta grid
 * "You are my.... `blank`"
     * on a tree, need to also save:
@@ -111,3 +115,28 @@ If I see a `DP: DP Conj DP`, I want to make it so the wordbanks for `Pronoun` an
 * verb agreement is done
 * noun pluralization is done
 * pronoun accusatives if in DP
+
+* bug fix with words not being deepcopied
+* created new WORD class
+    * word equality is based on the root word it's given
+* logical bug: RAPTURE OFFER YOU MY ARDOUR.
+    * fixed! subject agreement works now
+* posession/pluralization alternation - DONE
+* word pools with replacement - DONE
+
+TODO:
+* "You are my"...
+
+word pools with replacement: - DONE
+* if we go under a
+    * `NP` -- draw `A` with out replacement
+    * `DP: DP Conj DP` -- draw `N` without replacement
+    * `AP` -- *restrict* what `Adv` we can draw
+    * `Adv': AdvP Adv` and we're in left child -- *restrict* what `Adv` we can draw
+idea:
+* we have a set of leafs in WordBank for if we should do without replacement for a node. if we change this, we make a *copy* of that table entry (that's our destructive shit). otherwise we just use the original list. at the start of each node we call `WordBank.refresh()`, which sets replacement nodes to be their original values
+* `WordBank.refresh()`
+* `WordBank.replacement_set`
+* `WordBank.add_replacement_map(leaf)`
+* and then also modify `fill_word` to use the replacement map ofc
+* modify `_select` ofc

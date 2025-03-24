@@ -23,6 +23,10 @@ def generate(input_token=None, output_file=None, graph_search=False, show_trees=
     else:
         user_in = input("Enter bf program to process: ")
     bf = simplify_bf(user_in)
+    while not bf:
+        print("invalid program (no brainfuck characters)")
+        user_in = input("Enter bf program to process: ")
+        bf = simplify_bf(user_in)
     if bf != user_in:
         print('Simplified brainfuck to functional equivalence\n')
 
@@ -107,7 +111,7 @@ def main():
     commands = {GENERATE_COMMAND, "update_memo_table", "choice_search", "show_memo_table"}
 
     # default to generate command if not provided
-    if len(sys.argv) >= 2:
+    if len(sys.argv) >= 2 and '-h' not in sys.argv:
         has_command = False
         for command in commands:
             if command in sys.argv:
@@ -131,7 +135,7 @@ def main():
     # Create subparsers for commands
     subparsers = parser.add_subparsers(dest='command', metavar="COMMAND", help="Available commands")
 
-    gen_parser = subparsers.add_parser(GENERATE_COMMAND, help="Convert a bf program (file, argument, or user input) into an equivalent syntax structure")
+    gen_parser = subparsers.add_parser(GENERATE_COMMAND, help="Convert a bf program into an equivalent syntax structure")
     gen_parser.add_argument('-o', '--output', help=f"Output file for {GENERATE_COMMAND} command", default=None)
     gen_parser.add_argument('--graph-search', action='store_true', help="Use 'graph search' generation backend (default 'tree search')")
     gen_parser.add_argument('-t', '--show-trees', action='store_true', help="Show syntax trees")

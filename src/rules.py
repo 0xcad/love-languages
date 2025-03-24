@@ -3,11 +3,11 @@ import pickle
 
 rules = [
     #{'rule': "SP: AnyDP VP", 'ops': ""},
-    {'rule': "SP: SP SP", 'ops': "", "root": True},
-
     {'rule': "SP: DP VP", 'ops': "", "root": True},
     {'rule': "SP: EXC", 'ops': ".", "root": True, "word_cost": 1},
     {'rule': "SP: QUERY", 'ops': ".", "root": True, "word_cost": 1},
+
+    {'rule': "SP: SP SP", 'ops': "", "root": True},
 
     # TODO: this will actually work, I should just also add an additional key/value for the actual rule string, and if something should be "counted" or not, i.e printed out in our tree
     #{'rule': "AnyDP: DP", 'ops': ""},

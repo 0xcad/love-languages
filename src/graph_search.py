@@ -443,7 +443,7 @@ class GraphFinder(AStar):
             c = c.came_from
         print('')
 
-    def path_heuristic_cost_estimate(self, current, goal):
+    def path_heuristic_cost_estimate(self, current, goal, flag=False):
         came_from = current.came_from
 
         tree = current.data.tree
@@ -515,7 +515,7 @@ class GraphFinder(AStar):
         ## NOW, DO HEURISTIC
         return self.heuristic_cost_estimate(current.data.ops_path, goal)
 
-    def heuristic_cost_estimate(self, curr, goal):
+    def heuristic_cost_estimate(self, curr, goal, flag=False):
         '''
         The number of operations we need to add to the current program
         to the goal program
@@ -611,33 +611,13 @@ def choice_search():
             ]
         print('\n'.join(s))
         print("Current path:", " ".join([f'({n.node.rule_str})' for n in path]))
-        print(curr.ops_path, curr.is_exit)
+        print(curr.ops_path)
         i = int(input("Choice: ").strip())
         curr = curr.neighbors[i-1]
         print('')
 
 def main():
-    #choice_search()
-
-    import time
-    stime = time.time()
-    #paths = find_bf('>+>+++>+++++++>++++++++++<<<<-')
-    #paths = find_bf('>>>>>>>>')
-    paths = find_bf('+++++++++')
-    print(time.time()-stime)
-    #paths = find_bf('++++++++++[>+>+++>+++++++>++++++++++<<<<-]>>>++.>+.+++++++..+++.<<++.>+++++++++++++++.>.+++.------.--------.<<+.<.')
-    #paths = find_bf('.+[.+]')
-    for p in paths:
-        for n in p:
-            if n.tree:
-                print('(', end='')
-                for tn in n.tree.get_data():
-                    print(repr(tn), end=" || ")
-                print(')', end='')
-            elif not n.gn.is_choice:
-                print(repr(n.gn.node), end=" || ")
-    print('')
-
+    choice_search()
 
 
 

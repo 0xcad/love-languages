@@ -22,3 +22,11 @@ def combine_bf(*args) -> list:
         ops_path = helper(ops_path, ops)
 
     return ops_path
+
+
+def simplify_bf(bf_str) -> str:
+    ops_path = []
+    for c in bf_str:
+        if c in '.,+-[]><':
+            ops_path = combine_bf(ops_path, c)
+    return ''.join(ops_path)

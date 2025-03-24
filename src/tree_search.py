@@ -24,7 +24,7 @@ class TreeSearchNode(TreeNode):
         return new
 
     def node_str(self):
-        s = super().node_str()
+        s = str(self.rule)
         return s + ' ' + (self.rule.ops if self.rule.ops else '')
 
     def get_neighbors(self, exclude_SP_SP=False):
@@ -623,9 +623,6 @@ def choice_search():
         print(root)
         print('Current path')
         print(root.ops_path)
-        #score, mask = tf.heuristic_cost_estimate(root, '<')
-        #gscore = len(list(root.get_data()))
-        #print('fscore', score, 'gscore', gscore, 'score', gscore+score)
 
     M = TreeSearchMemoTree()
     M.load_from_file()
@@ -640,7 +637,6 @@ def main():
     M = TreeSearchMemoTree()
     M.load_from_file()
     #M.update()
-    print(M)
 
     #choice_search()
 
@@ -674,86 +670,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-test_tree_str = '''* SP: DP VP
-  * DP: D'
-    * Leaf
-    * D': D NP
-      * Leaf
-      * NP: N'
-        * Leaf
-        * N': N
-          * Leaf
-          * Leaf
-  * VP: V'
-    * Leaf
-    * V': DTV DTVDP
-      * Leaf
-      * DTVDP: DP DP
-        * DP: Pronoun
-          * Leaf
-          * Leaf
-        * DP: D'
-          * Leaf
-          * D': NP
-            * Leaf
-            * NP: N'
-              * Leaf
-              * N': N
-                * Leaf
-                * Leaf'''
-test_tree2_str = '''* SP: DP VP
-  * DP: DP Conj DP
-    * DP: Pronoun
-      * Leaf
-      * Leaf
-    * DP: Pronoun
-      * Leaf
-      * Leaf
-  * VP: V'
-    * Leaf
-    * V': TV DP
-      * Leaf
-      * DP: D'
-        * Leaf
-        * D': NP
-          * Leaf
-          * NP: N'
-            * Leaf
-            * N': N
-              * Leaf
-              * Leaf'''
-test_tree3_str = '''* SP: DP VP
-  * DP: D'
-    * Leaf
-    * D': NP
-      * Leaf
-      * NP: N'
-        * Leaf
-        * N': N
-          * Leaf
-          * Leaf
-  * VP: V'
-    * Leaf
-    * V': TV DP
-      * Leaf
-      * DP: D'
-        * Leaf
-        * D': D NP
-          * Leaf
-          * NP: N'
-            * Leaf
-            * N': N
-              * Leaf
-              * Leaf'''
-test_tree = TreeSearchNode.str_to_tree(test_tree_str)
-test_tree2 = TreeSearchNode.str_to_tree(test_tree2_str)
-test_tree3 = TreeSearchNode.str_to_tree(test_tree3_str)
-#print(test_tree)
-#x = tree_to_words(test_tree)
-#print(x)
-#print("*" * 10)
-#print(tree_to_words(test_tree))
-
-#l = TreeFinder().astar(pet_name_root, '+++++++', flag=True)
-#x=list(l)[-1].get_root()
-#print(tree_to_words(x))

@@ -5,7 +5,7 @@ rules = [
     #{'rule': "SP: AnyDP VP", 'ops': ""},
     {'rule': "SP: DP VP", 'ops': "", "root": True},
     {'rule': "SP: EXC", 'ops': ".", "root": True, "word_cost": 1},
-    {'rule': "SP: QUERY", 'ops': ".", "root": True, "word_cost": 1},
+    {'rule': "SP: QUERY", 'ops': ",", "root": True, "word_cost": 1},
 
     {'rule': "SP: SP SP", 'ops': "", "root": True},
 

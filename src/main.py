@@ -7,6 +7,7 @@ from words import tree_to_leafs, tree_to_words
 import argparse
 import time
 import sys
+import os
 
 def generate(input_token=None, output_file=None, graph_search=False, show_trees=False, show_leaves=False, show_time=False):
     # Read input from file or prompt the user

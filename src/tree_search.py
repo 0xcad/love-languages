@@ -6,6 +6,7 @@ from astar import AStar
 from math import inf
 import random
 import re
+import textwrap
 
 from collections import deque, defaultdict
 
@@ -281,6 +282,8 @@ pweights = {
 nweights = {
     "[": inf,
     "]": inf,
+    ",": inf,
+    ".": inf,
     "+": 3,
     "-": 3,
     ">": 1,
@@ -509,6 +512,14 @@ def invert_bf(bf):
     inv = [inv_d[c] for c in reversed(bf)]
     return inv
 
+PROGRAM_LENGTH_CONSTANT = 80
+def rightmost_node(tree):
+    curr = tree
+    while curr.third or curr.right:
+        curr = curr.third if curr.third else curr.right
+    curr.right = None
+    return curr
+
 def find_bf(bf, memo = None, depth=0):
     """
     Recursively finds and stitches together bf segments
@@ -517,7 +528,23 @@ def find_bf(bf, memo = None, depth=0):
     if not bf:
         return False
 
+
     bf_str = ''.join(bf) if type(bf) == list else bf
+
+    '''if len(bf_str) > PROGRAM_LENGTH_CONSTANT:
+        print('doing this shit')
+        chunks = textwrap.wrap(bf_str, width=PROGRAM_LENGTH_CONSTANT)
+        trees = [find_bf(chunk) for chunk in chunks]
+        root = trees[0]
+        curr = rightmost_node(trees[0])
+        for i in range(1, len(trees)):
+            curr = rightmost_node(TreeNode.insert_right(curr, trees[i]))
+        print(root)
+        ops_path_tree = combine_bf(*[tree.ops_path for tree in root.get_data()])
+        assert(bf == ops_path_tree)
+        return node'''
+
+
     #print(' ' * depth, 'recursing on', bf_str)
 
     '''
@@ -528,6 +555,7 @@ def find_bf(bf, memo = None, depth=0):
         weights = [1/ t.get_cost() for t in choices]
         root = random.choices(choices, weights=weights, k=1)[0]
         node = TreeNode(root, third=False)
+
         return node
 
     # greedily find best program

@@ -395,7 +395,7 @@ class TreeFinder(AStar):
     def is_goal_reached(self, current, goal):
         if current is None:
             return False
-        root = current.get_root_and_correct_parents()
+        root = current.get_root()
         #goal = [c for c in goal]
         #return root.is_complete and root.rule == RuleNode.root and root.ops_path == goal
         #return False
@@ -561,11 +561,10 @@ def find_bf(bf, memo = None, depth=0):
     # greedily find best program
     tf = TreeFinder()
     path = None
-    if "+++" in bf_str and random.random() < 0.99995:
+    if "+++" in bf_str and random.random() < 0.50:
         # 50% chance to use "You are my <adjectives> <petname>" type tree...
         # so now, also do "skip none" heuristic
         path = list(tf.astar(pet_name_root, bf, flag=True))
-        #TODO: iron this out
     else:
         path = list(tf.astar(None, bf))
     root = path[-1].get_root()

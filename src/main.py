@@ -60,6 +60,8 @@ def generate(input_token=None, output_file=None, graph_search=False, show_trees=
     if show_leaves:
         print(' '.join([tree_to_leafs(tree) for tree in sentence_tree.get_data()]))
 
+    print(sentence_tree)
+
     if show_trees:
         for tree in sentence_tree.get_data():
             print(tree)
@@ -108,8 +110,8 @@ def show_memo_table(filename):
 
 def main():
 
-    GENERATE_COMMAND = 'make_love'
-    commands = {GENERATE_COMMAND, "update_memo_table", "choice_search", "show_memo_table"}
+    GENERATE_COMMAND = 'make-love'
+    commands = {GENERATE_COMMAND, "update-memo-table", "choice-search", "show-memo-table"}
 
     # default to generate command if not provided
     if len(sys.argv) >= 2 and '-h' not in sys.argv:
@@ -125,9 +127,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Love Languages\n\nCommands:\n"
                     f"  [{GENERATE_COMMAND}]      Generate syntax structure from bf program (default command).\n"
-                    "  update_memo_table  Update memo table\n"
-                    "  choice_search      Choice search (showcases how generation work)\n"
-                    "  show_memo_table    Show memo table entries (optional filename, default: ts_memo.pkl)",
+                    "  update-memo-table  Update memo table\n"
+                    "  choice-search      Choice search (showcases how generation work)\n"
+                    "  show-memo-table    Show memo table entries (optional filename, default: ts_memo.pkl)",
         formatter_class=argparse.RawTextHelpFormatter
     )
 
@@ -145,14 +147,14 @@ def main():
     gen_parser.add_argument('input_program', nargs='?', help="Input bf program or file path to bf program")
 
     # update_memo_table command
-    subparsers.add_parser('update_memo_table', help="Update the memo table")
+    subparsers.add_parser('update-memo-table', help="Update the memo table")
 
     # choice_search command
-    choice_parser = subparsers.add_parser('choice_search', help="Execute choice search")
+    choice_parser = subparsers.add_parser('choice-search', help="Execute choice search")
     choice_parser.add_argument('--graph-search', action='store_true', help="Use 'graph search' generation backend (default 'tree search')")
 
     # show_memo_table command with an optional filename argument
-    show_memo_parser = subparsers.add_parser('show_memo_table', help="Print the memo table")
+    show_memo_parser = subparsers.add_parser('show-memo-table', help="Print the memo table")
     show_memo_parser.add_argument('filename', nargs='?', default='ts_trees.pkl', help="Memo table file (default: ts_trees.pkl)")
 
 
@@ -168,11 +170,11 @@ def main():
             show_leaves=args.show_leaves,
             show_time=args.show_time
         )
-    elif args.command == 'update_memo_table':
+    elif args.command == 'update-memo-table':
         update_memo_table()
-    elif args.command == 'choice_search':
+    elif args.command == 'choice-search':
         do_choice_search(graph_search=args.graph_search)
-    elif args.command == 'show_memo_table':
+    elif args.command == 'show-memo-table':
         show_memo_table(args.filename)
     else:
         parser.print_help()

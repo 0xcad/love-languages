@@ -243,9 +243,9 @@ class GraphNode:
 
     def get_neighbors(self):
         '''
-        the outgoing neighbors of a node (N: L R), where NR is "neighbor rule" (L or R):
-        1. all rules of the form (NR: (Leaf) NR_R)
-        2. if the right-recursive rule (NR: NR_L NR) exists, then all rules of the form (NR: (Leaf) NR_R) (enter a new choice node)
+        the outgoing neighbors of a node (N -> L R), where TR is "target rule" (either L or R):
+        1. all rules of the form (TR: (Leaf) TR_R)
+        2. if the right-recursive rule (TR: NR_L NR) exists, then all rules of the form (NR: (Leaf) NR_R) (enter a new choice node)
             * if in this scenario, we "enter a new scope", i.e start another committed list in our stack
         3. if the node is an *exit-node*, i.e L and R are both leafs, then
             * we can access all left-recursive `(X: X Y)` rules for nodes that are present in the current scope/stack/commitment/whatever.
@@ -257,11 +257,16 @@ class GraphNode:
         neighbors = []
 
         target_rule = None
+        # given a rule X -> Y Z
         if not(self.force_recurse_right) and not self.node.is_l_leaf:
+            # go to Y if it's not a leaf and we haven't explored it
             target_rule = self.node.l
         elif not self.node.is_r_leaf:
+            # if Y is a leaf, or we've already explored it, go to Z
             target_rule = self.node.r
         elif self.node.third:
+            # oh shit our rule was actually X -> Y Z W, go to W
+            # with our X-Bar rules no W is a leaf
             target_rule = self.node.third
         self.target_rule = target_rule
 
@@ -288,12 +293,12 @@ class GraphNode:
                     self._add_neighbor(neighbors, g)
 
 
-        # exit node
-        if self.is_exit:
+        # exit node, two leaves
+        else:
+            # assert self.is_exit
             scope = self.commitments[-1]
             for i, n in enumerate(scope):
 
-                g = None
                 # allow us to terminate the graph if we want to / restart
                 if n is None:
                     self.is_terminal = True # TODO?
@@ -602,19 +607,33 @@ def find_bf(bf):
 def choice_search():
     curr = root
     path = []
-    while curr.get_neighbors():
+    user_in = None
+    while user_in != "quit" and curr.get_neighbors():
         if not curr.is_choice:
             path.append(curr)
         s = [
                 f'{i + 1}. {"choice:" if n.is_choice else ""} {n.node.rule_str}\n  Commitments: {n.commitments}'
              for i, n in enumerate(curr.neighbors)
             ]
+        if curr.is_terminal:
+            s.insert(0, "0. Finish sentence and quit program")
         print('\n'.join(s))
         print("Current path:", " ".join([f'({n.node.rule_str})' for n in path]))
-        print(curr.ops_path)
-        i = int(input("Choice: ").strip())
-        curr = curr.neighbors[i-1]
-        print('')
+        #print(curr.ops_path)
+        user_in = input("Choice (number or `quit`): ").strip().lower()
+        if user_in == '0':
+            user_in = 'quit'
+        elif user_in.isdigit():
+            i = int(user_in)
+            curr = curr.neighbors[i-1]
+            print('')
+    print('')
+    print('*' * 80)
+    print('Traversed path:')
+    print(" ".join([f'({n.node.rule_str})' for n in path]))
+    print("\nEncoded bf program:")
+    bf = combine_bf(*[n.ops_path for n in path])
+    print(''.join(bf))
 
 def main():
     choice_search()

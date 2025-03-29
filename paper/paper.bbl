@@ -1,0 +1,39 @@
+\begin{thebibliography}{10}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\providecommand{\doi}[1]{https://doi.org/#1}
+
+\bibitem{berlekamp2001}
+Berlekamp, E.R., Conway, J.H., Guy, R.K.: Winning Ways for your Mathematical Plays. A K Peters Ltd., 2nd edn. (2001--2004)
+
+\bibitem{carnie2006}
+Carnie, A.: Syntax: A Generative Introduction. Blackwell Publishing, second edn. (2006), x-Bar Theory
+
+\bibitem{chomsky1957}
+Chomsky, N.: Syntactic Structures. Mouton de Gruyter (1957)
+
+\bibitem{chomsky1970}
+Chomsky, N.: Remarks on nominalization. R. Jacobs and P. Rosenbaum (eds.) pp. 184--221 (1970)
+
+\bibitem{gaboury2013}
+Gaboury, J.: A queer history of computing: Part three. Online (2013), \url{https://rhizome.org/editorial/2013/apr/9/queer-history-computing-part-three/}
+
+\bibitem{hodges1992}
+Hodges, A.: Alan Turing: The Enigma. Vintage Books, London (1992)
+
+\bibitem{hoekstra1991}
+Hoekstra, E.: X-bar theory and licensing mechanisms. The Linguistic Review  \textbf{8}(1),  47--74 (1991). \doi{doi:10.1515/tlir.1991.8.1.47}, \url{https://doi.org/10.1515/tlir.1991.8.1.47}
+
+\bibitem{bf_turing_complete}
+{Iwriteiam.nl}: Bf is turing-complete. Online (2023), \url{https://iwriteiam.nl/Ha_bf_Turing.html}, accessed: 2023-04-30
+
+\bibitem{kleene1952}
+Kleene, S.C.: Introduction to Metamathematics. North-Holland (1952)
+
+\bibitem{montfort2014}
+Montfort, N.: Love letters. Online (2014), \url{https://nickm.com/memslam/love_letters.html}, accessed: 2025-03-29
+
+\bibitem{turing1936}
+Turing, A.M.: On computable numbers, with an application to the entscheidungsproblem. Proceedings of the London Mathematical Society  \textbf{s2-42}(1),  230--265 (1936)
+
+\end{thebibliography}

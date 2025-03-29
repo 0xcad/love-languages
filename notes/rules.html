@@ -1,0 +1,210 @@
+<!--
+  A program to help me write/test the results of rules all at once
+  UI/UX:
+    * I want to be able to see several sentences, represented by strings I encode, and then their value of `>` and `<`
+    * At the bototm of the page I see a bunch of input boxes I can type into, and on their change it updates the rules, which updates the strings based on that.
+    * Internally I just count the number of `>` as +1, `<` as -1, and output the score?
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        max-width: 55rem;
+        margin: 2em auto;
+        border: 2px solid black;
+      }
+      .inputs ul {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-column-gap: 0.75rem;
+        grid-row-gap: 1rem;
+      }
+      .inputs li {
+        display: contents;
+      }
+      .inputs {
+        /*display: grid;
+        grid-template-columns: repeat(auto-fill, 500px);
+        gap: 1rem;*/
+        display: flex;
+        flex-flow: row wrap;
+        align-items: start;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <ul class='sentences'></ul>
+      <div class='inputs'></div>
+    </main>
+  </body>
+  <script>
+var rules = {
+  DP: {
+    "DP_pro": undefined,
+    "DP": undefined,
+    "DP_Conj DP": undefined,
+    "D'": undefined, // D': D NP
+    "D'_NP": undefined,
+  },
+
+  NP: {
+    "NP": undefined,
+    "NP_Conj NP": undefined,
+    "N'_AP N": undefined,
+    "N'_N' PP": undefined,
+    "N'_N PP": undefined,
+    "N'": undefined, // N': N
+  },
+
+  VP: {
+    "VP": undefined,
+    "VP_Conj VP": undefined,
+    "V'_V' PP": undefined,
+    "V'_V' AdvP": undefined,
+    "V'": undefined, // V': V
+    "V'_V DP": undefined,
+    "V'_DTV DP DP": undefined,
+    "V'_V CP": undefined,
+  },
+
+  PP: {
+    "PP": undefined,
+    "PP_Conj PP": undefined,
+    "P'_P' PP": undefined,
+    "P'": undefined, // P': P
+    "P'_P DP": undefined,
+  },
+};
+var flatRules = flattenDictionary(rules);
+
+const sentences = [
+  ["(I) verb", "DP_pro VP V'"], // <3
+  ["(I) (verb and verb)", "DP_pro VP V' (VP_Conj VP) VP V'"],
+  ["(My noun) verbs", "DP D' NP N' VP V'"],
+  ["(My noun of nouns) verbs", "DP D' NP (N'_N PP) PP (P'_P DP) DP NP N' VP V'"],
+  ["(I) verb (for your noun)", "DP_pro VP V' (V'_V' PP) PP (P'_P DP) DP D' NP N'"],
+  ["(I) verb (for your noun) (with my noun)", "DP_pro VP V' (V'_V' PP) PP (P'_P DP) DP D' NP N' (V'_V' PP) PP (P'_P DP) DP D' NP N'"],
+  ["(I) verb ((for your noun) and (for your noun))", "DP_pro VP V' (V'_V' PP) PP (P'_P DP) DP D' NP N' (PP_Conj PP) PP (P'_P DP) DP D' NP N'"],
+  ["(My noun) verbs (for your noun)", "DP D' NP N' VP V' (V'_V' PP) PP (P'_P DP) DP D' NP N'"],
+  ["(My noun) verbs ((for your noun) and (for your noun))", "DP D' NP N' VP V' (V'_V' PP) PP (P'_P DP) DP D' NP N' (PP_Conj PP) PP (P'_P DP) DP D' NP N'"],
+  ["(My noun) verbs (for your (noun and noun))", "DP D' NP N' VP V' (V'_V' PP) PP (P'_P DP) DP D' NP N' (NP_Conj NP) NP N'"],
+  ["(You and I) verb", "DP_pro (DP_Conj DP) DP_pro VP V'"],
+  ["(My noun) tverbs (your noun)", "DP D' NP N' VP (V'_V DP) DP D' NP N'"],
+  ["(My noun) dtverbs (your noun) (my noun)", "DP D' NP N' VP (V'_DTV DP DP) DP D' NP N' DP D' NP N'"],
+  ["I dtverbs (your noun) (my noun)", "DP_pro VP (V'_DTV DP DP) DP D' NP N' DP D' NP N'"],
+  ["((My noun) and (my noun)) verbs", "DP D' NP N' (DP_Conj DP) DP D' NP N' VP V'"],
+  ["((My noun) and (my noun)) verb (with your noun)", "DP D' NP N' (DP_Conj DP) DP D' NP N' VP V' (V'_V' PP) PP (P'_P DP) D' NP N'"],
+  ["Nouns verb", "DP D'_NP NP N' VP V'"],
+  ["Nouns verb (for your noun)", "DP D'_NP NP N' VP V' (V'_V' PP) PP (P'_P DP) DP D' NP N'"],
+  ["Nouns verb (my noun)", "DP D'_NP NP N' VP (V'_V DP) DP D' NP N'"],
+];
+
+const sentencesEl = document.querySelector('.sentences');
+const inputsEl = document.querySelector(".inputs");
+
+function addSentences() {
+  sentencesEl.innerHTML = "";
+  sentences.forEach((s) => {
+    var sString = s[0];
+    var sRules = s[1];
+
+    var el = document.createElement('li');
+    var opString = getOpString(sRules);
+    el.innerHTML = `${sString}: <b>${opString}</b>`;
+    el.setAttribute('title', sRules);
+
+    sentencesEl.appendChild(el);
+  });
+}
+addSentences();
+
+function getOpString(sRules) {
+  // decompose the string `sRules` into an array of keys that are the rules
+  const regex = /\(([^()]+)\)|\S+/g;
+  const ruleArr = Array.from(sRules.matchAll(regex), match => match[1] || match[0]);
+
+  // take the result, and get all the strings in "rules"
+  // if it's undefined, don't get any string
+  const x = ruleArr
+  .map(y => (flatRules[y] ? flatRules[y] : ""))
+  .join("");
+
+  //return x;
+  return simplifyBrainfuck(x);
+};
+
+
+// ty chatgpt
+function simplifyBrainfuck(code) {
+    let simplified = [];
+    let netMovement = 0; // Tracks the net movement for > and <
+    let netValueChange = 0; // Tracks the net value change for + and -
+    for (const char of code) {
+        if (char === '>') {
+            if (netValueChange !== 0) {
+                // Push accumulated value change, then reset it
+                simplified.push(netValueChange > 0 ? '+'.repeat(netValueChange) : '-'.repeat(-netValueChange));
+                netValueChange = 0;
+            }
+            netMovement++;
+        } else if (char === '<') {
+            if (netValueChange !== 0) {
+                // Push accumulated value change, then reset it
+                simplified.push(netValueChange > 0 ? '+'.repeat(netValueChange) : '-'.repeat(-netValueChange));
+                netValueChange = 0;
+            }
+            netMovement--;
+        }
+        else if (char === '+')
+          netValueChange++;
+        else if (char === '-')
+          netValueChange--;
+    }
+    // Push remaining net movements and value changes
+    if (netMovement !== 0)
+      simplified.push(netMovement > 0 ? '>'.repeat(netMovement) : '<'.repeat(-netMovement));
+    if (netValueChange !== 0)
+      simplified.push(netValueChange > 0 ? '+'.repeat(netValueChange) : '-'.repeat(-netValueChange));
+    return simplified.join('');
+}
+
+function flattenDictionary(dictOfDicts) {
+  const flattened = {};
+  for (const [key, innerDict] of Object.entries(dictOfDicts)) {
+    Object.assign(flattened, innerDict);
+  }
+  return flattened;
+}
+
+function addInputs(){
+  Object.keys(rules).forEach((segment) => {
+
+    const segmentEl = document.createElement("ul");
+
+    Object.keys(rules[segment]).forEach((rule) => {
+      var li = document.createElement("li");
+      li.innerHTML = `<label>${rule}: </label> `;
+
+      var inputEl = document.createElement("input");
+      inputEl.type = "text";
+      inputEl.value = typeof flatRules[rule] === "string" ? flatRules[rule] : "";
+
+      inputEl.addEventListener("keyup", (event) => {
+        flatRules[rule] = event.target.value;
+        addSentences();
+      });
+
+      li.appendChild(inputEl);
+
+      segmentEl.appendChild(li);
+    });
+
+    inputsEl.appendChild(segmentEl);
+  });
+}
+addInputs();
+  </script>
+</html>

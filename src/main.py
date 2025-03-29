@@ -60,8 +60,6 @@ def generate(input_token=None, output_file=None, graph_search=False, show_trees=
     if show_leaves:
         print(' '.join([tree_to_leafs(tree) for tree in sentence_tree.get_data()]))
 
-    print(sentence_tree)
-
     if show_trees:
         for tree in sentence_tree.get_data():
             print(tree)

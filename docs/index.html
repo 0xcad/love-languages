@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="Love Languages">
+  <meta name="author" content="cassidy diamond">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Love Languages</title>
+
+  <style>
+    :root {
+      --bg: #f4f4f4;
+      --link: #FF5733;
+      --text: #333;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      color: var(--text);
+      background: var(--bg);
+      font-size: 1.2em;
+      line-height: 1.2;
+      padding: 0 1rem;
+    }
+    a:not(.author a), a:visited, a:hover {
+      color: var(--link);
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    .author a{
+      color: var(--text);
+      text-decoration: none;
+    }
+    a:not(.author a):hover {
+      text-shadow: 1rem 1rem var(--text);
+      letter-spacing: 2px;
+    }
+    main {
+      max-width: 50rem;
+      margin: 1.5rem auto;
+      border: 2px solid var(--text);
+      padding: 0.75rem 1.5rem;
+      box-sizing: border-box;
+    }
+    main h1 {
+      margin: 0.5rem 0;
+    }
+    h1, h2, .author {
+      text-align: center;
+    }
+    .abstract {
+      padding: 0 3rem;
+    }
+    .shadow {
+      text-shadow: 2px 2px var(--link);
+      font-weight: bold;
+      position: relative;
+    }
+    .shadow:hover::before {
+      letter-spacing: 2px;
+      content: attr(data-text);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+      background: var(--bg);
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    img {
+      padding: 1rem;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    details {
+      margin-top: 1rem;
+      border: 1.5px dashed var(--link);
+    }
+    summary {
+      padding: 0.5rem;
+      cursor: pointer;
+    }
+  </style>
+
+</head>
+
+<body>
+  <main>
+    <h1>Love Languages</h1>
+    <h2>Reimagining English Syntax Trees as Turing Complete Language</h2>
+    <p class='author'><a href="/"><span class='shadow' data-text="Cassidy Diamond">Cassidy Diamond</span></a></p>
+    <p class='abstract'><b>Abstract.</b> This project reimagines the syntax structure of the English language as a Turing Complete programming language. I present a schema to convert syntax trees into Brainfuck (bf) programs. Under this schema, I then explore two approaches for converting bf programs into syntax trees that represent functionally-equivalent programs. A final algorithm assigns words to completed syntax trees, generating executable sentences, and connects the results and processes of this project to Christopher Strachey’s Love Letter Algorithm. This positions my programming Love Language as a response to one of the first examples of computer-generated literature and as an instance of queer computer art itself.</p>
+    <ul>
+      <li><a href="paper/paper.pdf">Read the paper</a></li>
+      <li>
+        <div>
+          <a href="https://github.com/dialmond/love-languages">Download the code</a>
+        </div>
+      </li>
+    </ul>
+    <img src="paper/images/letter.jpeg" alt="I HUNGER FOR EAGERNESS. YOU ARE MY COVETOUS FOND LOVEABLE JEWEL. YOUR LOVE GAZES AFFECTIONATELY AND TENDERLY AND BEAUTIFULLY EAGERLY. I OBSESS ON YOUR FANCY. MY INTENSELY AVID ENTHUSIASM YEARNS. MY INCREDIBLY IMPATIENT AMBITION SWOONS. YOUR KEEN LUST CARESSES. MY BEAUTIFULLY AVID LOVEABLE BURNING INFATUATION MELTS. MY EAGERNESS CRAVES YOUR ENCHANTMENT. YOU ARE MY CRAVING ANXIOUS JEWEL. YOUR INTENSELY LOVEABLE HEART SIGHS. YOU PANT FOR APPETITE. YOU ARE MY CURIOUS DEAR. I CURIOUSLY LEAP. YOUR RAPTURE AND ENCHANTMENT SWOONS. I LONG FOR YOUR EAGERNESS. BURNING FELLOW FEELINGS KEENLY DREAM. PLEASE! MY LOVINGLY EROTIC WISH LEAPS. PLEASE! FONDNESS OFFERS YOU MY HEART. YOU ARE MY LOVEABLE SYMPATHETIC HONEY. YOUR INTENSELY DEAR PASSION LEAPS. LORD ABOVE! LORD ABOVE! I CARESS ON YOUR FONDNESS. MY FOND SYMPATHY SIGHS. OH! YOU FLUTTER. MY LITTLE FONDNESS AFFECTIONATELY SWOONS. OH! YOUR ANXIOUS CRAVING EROTIC BREATHLESS PRECIOUS FONDNESS FLIRTS. OH! MY ADORATION FLIRTS. PLEASE! DESIRE OFFERS ME YOUR WISH. I AM YOUR AMOROUS DUCK. YOUR ENTHUSIASM MELTS. OH! I LIKE APPETITE. I AM YOUR INTENSELY PASSIONATE PRECIOUS JEWEL. MY EAGER TOTALLY UNSATISFIED WISH DREAMS. LORD ABOVE! I MELT LIKE YOUR EAGERNESS. YOUR TENDER UNSATISFIED BEAUTIFULLY COVETOUS PRECIOUS TENDERNESS YEARNS. OH! I HUNGER. YOUR BEAUTIFULLY ARDENT HUNGER YEARNS. LORD ABOVE! I THIRST FOR YOUR TENDERNESS. MY LOVE DREAMS. OH!"/>
+  </main>
+</body>
+</html>

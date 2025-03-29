@@ -561,8 +561,8 @@ def find_bf(bf, memo = None, depth=0):
     # greedily find best program
     tf = TreeFinder()
     path = None
-    if "+++" in bf_str and random.random() < 0.50:
-        # 50% chance to use "You are my <adjectives> <petname>" type tree...
+    if "+++" in bf_str and random.random() < 0.70:
+        # 70% chance to use "You are my <adjectives> <petname>" type tree...
         # so now, also do "skip none" heuristic
         path = list(tf.astar(pet_name_root, bf, flag=True))
     else:

@@ -1,0 +1,49 @@
+This is BibTeX, Version 0.99d (TeX Live 2024/Arch Linux)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: paper.aux
+The style file: splncs04.bst
+Database file #1: references.bib
+Warning--I'm ignoring hoekstra1991's extra "title" field
+--line 65 of file references.bib
+You've used 11 entries,
+            2850 wiz_defined-function locations,
+            666 strings with 5741 characters,
+and the built_in function-call counts, 4551 in all, are:
+= -- 360
+> -- 87
+< -- 5
++ -- 38
+- -- 26
+* -- 253
+:= -- 591
+add.period$ -- 12
+call.type$ -- 11
+change.case$ -- 46
+chr.to.int$ -- 0
+cite$ -- 11
+duplicate$ -- 432
+empty$ -- 499
+format.name$ -- 27
+if$ -- 1018
+int.to.chr$ -- 0
+int.to.str$ -- 11
+missing$ -- 84
+newline$ -- 39
+num.names$ -- 22
+pop$ -- 163
+preamble$ -- 1
+purify$ -- 35
+quote$ -- 0
+skip$ -- 123
+stack$ -- 0
+substring$ -- 246
+swap$ -- 200
+text.length$ -- 5
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 34
+warning$ -- 0
+while$ -- 41
+width$ -- 13
+write$ -- 118
+(There was 1 warning)
